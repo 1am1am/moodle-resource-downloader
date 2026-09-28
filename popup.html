@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Moodle Course Downloader</title>
+  <title>Moodle Downloader</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -11,18 +11,22 @@
     <!-- Header -->
     <header class="popup-header">
       <div class="header-logo">
-        <img src="icons/icon48.png" alt="Logo" width="28" height="28">
+        <img src="icons/icon48.png" alt="Logo" width="24" height="24">
         <div>
           <h2>Moodle Downloader</h2>
           <span class="sub-text">FIT@HCMUS & Moodle LMS</span>
         </div>
       </div>
-      <span id="badge-count" class="badge">0 file</span>
+      <span id="badge-count" class="badge">0 tệp</span>
     </header>
 
     <!-- Not on Moodle State -->
     <div id="not-moodle-view" class="state-view hidden">
-      <div class="empty-icon">📂</div>
+      <div class="empty-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </div>
       <h3>Chưa phát hiện trang Moodle</h3>
       <p>Hãy điều hướng tới trang môn học trên Moodle (ví dụ: <code>courses.ctda.hcmus.edu.vn/course/view.php?id=...</code>) rồi mở lại tiện ích.</p>
     </div>
@@ -40,22 +44,22 @@
         <button id="btn-select-all" class="btn-text">Chọn tất cả</button>
         <span class="divider">|</span>
         <button id="btn-deselect-all" class="btn-text">Bỏ chọn</button>
-        <button id="btn-rescan" class="btn-text btn-refresh" title="Quét lại">🔄 Quét lại</button>
+        <button id="btn-rescan" class="btn-text btn-refresh" title="Quét lại">Quét lại</button>
       </div>
 
       <!-- Options -->
       <div class="options-box">
-        <label class="checkbox-container highlight">
+        <label class="checkbox-container">
           <input type="checkbox" id="opt-zip" checked>
-          <span><strong>📦 Nén toàn bộ thành file .ZIP</strong> (Mặc định)</span>
+          <span>Nén toàn bộ thành tệp .ZIP (Mặc định)</span>
         </label>
         <label class="checkbox-container">
           <input type="checkbox" id="opt-folders" checked>
-          <span>Tạo thư mục con theo tuần/chương</span>
+          <span>Tạo thư mục con theo tuần</span>
         </label>
         <label class="checkbox-container">
           <input type="checkbox" id="opt-index">
-          <span>Đánh số thứ tự file (01_, 02_...)</span>
+          <span>Đánh số thứ tự (01_, 02_...)</span>
         </label>
       </div>
 
@@ -78,7 +82,7 @@
       <!-- Footer Buttons -->
       <footer class="popup-footer">
         <button id="btn-start-download" class="btn-primary" disabled>
-          🚀 Tải các file đã chọn
+          Tải các tệp đã chọn
         </button>
       </footer>
     </div>

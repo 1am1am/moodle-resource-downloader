@@ -3,18 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Moodle Course Resource Downloader | FIT@HCMUS</title>
+  <title>Moodle Course Downloader | FIT@HCMUS</title>
   <link rel="icon" href="icons/icon48.png" type="image/png">
   <style>
     :root {
-      --primary: #0d9488;
-      --primary-dark: #0f766e;
-      --primary-light: #ccfbf1;
-      --accent: #14b8a6;
-      --text-main: #0f172a;
-      --text-muted: #475569;
-      --bg: #f8fafc;
-      --card-bg: #ffffff;
+      --slate-950: #020617;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-500: #64748b;
+      --slate-400: #94a3b8;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --slate-50: #f8fafc;
+      --blue-600: #2563eb;
+      --blue-700: #1d4ed8;
     }
 
     * {
@@ -25,13 +29,14 @@
     }
 
     body {
-      background-color: var(--bg);
-      color: var(--text-main);
+      background-color: var(--slate-50);
+      color: var(--slate-900);
       line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
     }
 
     .container {
-      max-width: 960px;
+      max-width: 980px;
       margin: 0 auto;
       padding: 0 24px;
     }
@@ -39,8 +44,11 @@
     /* Header */
     header {
       background: #ffffff;
-      border-bottom: 1px solid #e2e8f0;
-      padding: 16px 0;
+      border-bottom: 1px solid var(--slate-200);
+      padding: 14px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     .nav-wrapper {
@@ -49,80 +57,85 @@
       align-items: center;
     }
 
-    .logo-badge {
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--slate-900);
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .nav-links {
       display: flex;
       align-items: center;
       gap: 12px;
-      text-decoration: none;
-      color: var(--text-main);
-      font-weight: 700;
-      font-size: 18px;
     }
 
-    .github-link {
-      display: flex;
+    .nav-btn {
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
-      text-decoration: none;
-      color: var(--text-muted);
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 13px;
       font-weight: 600;
-      font-size: 14px;
-      padding: 8px 16px;
-      border-radius: 8px;
-      border: 1px solid #e2e8f0;
-      transition: all 0.2s;
+      text-decoration: none;
+      transition: all 0.15s ease;
     }
 
-    .github-link:hover {
-      background: #f1f5f9;
-      color: var(--text-main);
+    .nav-btn-secondary {
+      color: var(--slate-700);
+      border: 1px solid var(--slate-200);
+      background: #ffffff;
     }
 
-    /* Hero Section */
+    .nav-btn-secondary:hover {
+      background: var(--slate-100);
+      color: var(--slate-900);
+    }
+
+    /* Hero */
     .hero {
-      padding: 70px 0 50px;
+      padding: 64px 0 48px;
       text-align: center;
     }
 
     .badge-pill {
       display: inline-block;
-      background: var(--primary-light);
-      color: var(--primary-dark);
+      background: #ffffff;
+      color: var(--slate-600);
       font-size: 12px;
-      font-weight: 700;
-      padding: 6px 14px;
-      border-radius: 999px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 99px;
+      border: 1px solid var(--slate-200);
       margin-bottom: 20px;
     }
 
     .hero h1 {
-      font-size: 42px;
+      font-size: 38px;
       font-weight: 800;
       line-height: 1.25;
-      color: var(--text-main);
-      margin-bottom: 18px;
-    }
-
-    .hero h1 span {
-      background: linear-gradient(135deg, var(--primary) 0%, #0284c7 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--slate-950);
+      margin-bottom: 16px;
+      letter-spacing: -0.5px;
     }
 
     .hero p {
-      font-size: 18px;
-      color: var(--text-muted);
-      max-width: 680px;
-      margin: 0 auto 36px;
+      font-size: 17px;
+      color: var(--slate-600);
+      max-width: 640px;
+      margin: 0 auto 32px;
     }
 
-    /* CTA Buttons */
-    .cta-group {
+    /* CTA Area */
+    .cta-area {
       display: flex;
       justify-content: center;
-      gap: 16px;
+      align-items: center;
+      gap: 14px;
       flex-wrap: wrap;
       margin-bottom: 24px;
     }
@@ -130,173 +143,291 @@
     .btn {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
-      padding: 14px 28px;
-      border-radius: 12px;
-      font-size: 15px;
-      font-weight: 700;
+      gap: 8px;
+      padding: 12px 22px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
       text-decoration: none;
       cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.15s ease;
     }
 
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    .btn-dark {
+      background: var(--slate-900);
       color: #ffffff;
-      box-shadow: 0 10px 20px -5px rgba(13, 148, 136, 0.4);
+      border: 1px solid var(--slate-900);
     }
 
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 14px 25px -5px rgba(13, 148, 136, 0.5);
+    .btn-dark:hover {
+      background: var(--slate-800);
+      transform: translateY(-1px);
     }
 
-    .btn-secondary {
+    .btn-light {
       background: #ffffff;
-      color: var(--primary-dark);
-      border: 1.5px solid var(--primary);
+      color: var(--slate-800);
+      border: 1px solid var(--slate-200);
     }
 
-    .btn-secondary:hover {
-      background: var(--primary-light);
-      transform: translateY(-2px);
+    .btn-light:hover {
+      background: var(--slate-100);
+      border-color: var(--slate-300);
+      transform: translateY(-1px);
     }
 
-    /* Notice box */
-    .chrome-notice {
-      max-width: 600px;
-      margin: 0 auto 40px;
-      background: #fffbeb;
-      border: 1px solid #fef3c7;
-      border-left: 4px solid #f59e0b;
-      padding: 12px 16px;
-      border-radius: 8px;
+    /* Bookmarklet draggable box */
+    .bookmarklet-box {
+      max-width: 620px;
+      margin: 0 auto 48px;
+      background: #ffffff;
+      border: 1px dashed var(--slate-300);
+      border-radius: 10px;
+      padding: 18px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bookmarklet-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--slate-100);
+      color: var(--slate-900);
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: 1px solid var(--slate-300);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: grab;
+      user-select: none;
+      text-decoration: none;
+    }
+
+    .bookmarklet-item:hover {
+      background: var(--slate-200);
+    }
+
+    .bookmarklet-item:active {
+      cursor: grabbing;
+    }
+
+    .bookmarklet-desc {
       font-size: 13px;
-      color: #92400e;
-      text-align: left;
+      color: var(--slate-500);
     }
 
-    /* Features Grid */
-    .features-section {
-      padding: 40px 0 60px;
+    .copy-link-btn {
+      background: none;
+      border: none;
+      color: var(--blue-600);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
     }
 
-    .section-title {
+    /* Demo Preview Card */
+    .preview-section {
+      margin-bottom: 60px;
+    }
+
+    .window-card {
+      background: #ffffff;
+      border: 1px solid var(--slate-200);
+      border-radius: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+    }
+
+    .window-header {
+      background: var(--slate-100);
+      border-bottom: 1px solid var(--slate-200);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .window-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--slate-300);
+    }
+
+    .window-title {
+      margin-left: 8px;
+      font-size: 12px;
+      color: var(--slate-500);
+      font-weight: 600;
+    }
+
+    .window-body {
+      padding: 0;
+      background: #ffffff;
+    }
+
+    .window-body img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Methods Section */
+    .methods-section {
+      background: #ffffff;
+      border-top: 1px solid var(--slate-200);
+      border-bottom: 1px solid var(--slate-200);
+      padding: 60px 0;
+    }
+
+    .section-head {
       text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .section-head h2 {
       font-size: 26px;
       font-weight: 800;
-      margin-bottom: 32px;
+      color: var(--slate-950);
+      margin-bottom: 8px;
     }
 
-    .grid {
+    .section-head p {
+      font-size: 15px;
+      color: var(--slate-500);
+    }
+
+    .methods-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 24px;
+    }
+
+    .method-card {
+      border: 1px solid var(--slate-200);
+      border-radius: 12px;
+      padding: 28px;
+      background: var(--slate-50);
+    }
+
+    .method-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 14px;
+      background: var(--slate-200);
+      color: var(--slate-700);
+    }
+
+    .method-card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--slate-900);
+    }
+
+    .method-card p {
+      font-size: 13px;
+      color: var(--slate-600);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .steps-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .step-entry {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--slate-700);
+    }
+
+    .step-idx {
+      background: var(--slate-200);
+      color: var(--slate-800);
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .step-entry code {
+      background: #ffffff;
+      border: 1px solid var(--slate-200);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--slate-900);
+    }
+
+    /* Features Section */
+    .features-section {
+      padding: 60px 0;
+    }
+
+    .feat-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 20px;
     }
 
-    .card {
-      background: var(--card-bg);
-      border: 1px solid #e2e8f0;
-      border-radius: 14px;
-      padding: 24px;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08);
-    }
-
-    .card-icon {
-      font-size: 30px;
-      margin-bottom: 12px;
-    }
-
-    .card h3 {
-      font-size: 17px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: var(--text-main);
-    }
-
-    .card p {
-      font-size: 14px;
-      color: var(--text-muted);
-      line-height: 1.5;
-    }
-
-    /* Steps Section */
-    .steps-section {
+    .feat-card {
       background: #ffffff;
-      border-top: 1px solid #e2e8f0;
-      border-bottom: 1px solid #e2e8f0;
-      padding: 50px 0 60px;
+      border: 1px solid var(--slate-200);
+      border-radius: 10px;
+      padding: 22px;
     }
 
-    .step-list {
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-      max-width: 680px;
-      margin: 0 auto;
-    }
-
-    .step-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      padding: 16px 20px;
-      border-radius: 12px;
-    }
-
-    .step-number {
-      background: var(--primary);
-      color: #ffffff;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 14px;
-      flex-shrink: 0;
-    }
-
-    .step-content h4 {
+    .feat-card h4 {
       font-size: 15px;
       font-weight: 700;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      color: var(--slate-900);
     }
 
-    .step-content p {
+    .feat-card p {
       font-size: 13px;
-      color: var(--text-muted);
-    }
-
-    .step-content code {
-      background: #e2e8f0;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 12px;
-      color: var(--primary-dark);
-      font-weight: 600;
+      color: var(--slate-600);
+      line-height: 1.5;
     }
 
     /* Footer */
     footer {
-      padding: 30px 0;
+      border-top: 1px solid var(--slate-200);
+      padding: 32px 0;
       text-align: center;
       font-size: 13px;
-      color: var(--text-muted);
+      color: var(--slate-500);
+      background: #ffffff;
     }
 
     footer a {
-      color: var(--primary);
+      color: var(--slate-800);
       text-decoration: none;
       font-weight: 600;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -305,105 +436,152 @@
   <!-- Navigation -->
   <header>
     <div class="container nav-wrapper">
-      <a href="#" class="logo-badge">
-        <img src="icons/icon48.png" alt="Logo" width="30" height="30">
+      <a href="#" class="logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
         <span>Moodle Downloader</span>
       </a>
-      <a href="https://github.com/1am1am/moodle-resource-downloader" target="_blank" class="github-link">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-        </svg>
-        <span>GitHub Repository</span>
-      </a>
+      <div class="nav-links">
+        <a href="https://github.com/1am1am/moodle-resource-downloader" target="_blank" class="nav-btn nav-btn-secondary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          <span>GitHub</span>
+        </a>
+      </div>
     </div>
   </header>
 
-  <!-- Hero -->
+  <!-- Hero Section -->
   <section class="hero">
     <div class="container">
-      <span class="badge-pill">Dành cho sinh viên HCMUS & FIT Moodle</span>
-      <h1>Tải trọn bộ tài liệu môn học<br><span>thành 1 file .ZIP chỉ với 1 Click</span></h1>
-      <p>Không cần tốn công bấm tải từng file thủ công. Tự động quét tất cả slide bài giảng, phân chia thư mục theo tuần và gom gọn gàng.</p>
+      <div class="badge-pill">FIT@HCMUS & Moodle LMS</div>
+      <h1>Tải trọn bộ tài liệu môn học<br>thành tệp .ZIP</h1>
+      <p>Tự động quét toàn bộ bài giảng, slide, đề thi trên khóa học Moodle và nén gọn gàng theo từng tuần chỉ với một thao tác.</p>
 
-      <div class="cta-group">
-        <a href="moodle-downloader-extension.zip" class="btn btn-primary" download>
-          <span>📦 Tải Extension về máy (.ZIP)</span>
+      <!-- Bookmarklet CTA -->
+      <div class="bookmarklet-box">
+        <a id="bm-link" class="bookmarklet-item" href="javascript:(function(){var s=document.createElement('script');s.src='https://1am1am.github.io/moodle-resource-downloader/bookmarklet.js?t='+Date.now();document.head.appendChild(s);})();" title="Kéo nút này vào thanh Dấu trang của trình duyệt">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Moodle Downloader</span>
         </a>
-        <a href="https://raw.githubusercontent.com/1am1am/moodle-resource-downloader/main/moodle-downloader.user.js" class="btn btn-secondary" target="_blank">
-          <span>⚡ Cài đặt 1-Click (Tampermonkey)</span>
-        </a>
+        <div class="bookmarklet-desc">
+          Kéo nút trên vào <strong>thanh Dấu trang (Bookmarks Bar)</strong> của trình duyệt (phím tắt <code>Ctrl + Shift + B</code>).
+        </div>
+        <button id="copy-bm-btn" class="copy-link-btn">Sao chép mã Bookmarklet vào bộ nhớ tạm</button>
       </div>
 
-      <div class="chrome-notice">
-        <strong>💡 Lưu ý về tính năng 1-Click của Chrome:</strong> Theo chính sách bảo mật của Google, các trang web ngoài Chrome Web Store không thể tự ý cài thẳng extension vào trình duyệt. Do đó, bạn của bạn có thể <strong>tải file ZIP (cài trong 20s)</strong> hoặc bấm vào <strong>Cài đặt 1-Click qua Tampermonkey</strong> cực kỳ tiện lợi!
+      <div class="cta-area">
+        <a href="moodle-downloader-extension.zip" class="btn btn-dark" download>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Tải Chrome Extension (.ZIP)</span>
+        </a>
+        <a href="#instructions" class="btn btn-light">
+          <span>Xem hướng dẫn cài đặt</span>
+        </a>
       </div>
     </div>
   </section>
 
-  <!-- Features -->
+  <!-- Demo Preview -->
+  <section class="preview-section">
+    <div class="container">
+      <div class="window-card">
+        <div class="window-header">
+          <div class="window-dot"></div>
+          <div class="window-dot"></div>
+          <div class="window-dot"></div>
+          <span class="window-title">courses.ctda.hcmus.edu.vn — Giao diện Moodle khóa học</span>
+        </div>
+        <div class="window-body">
+          <img src="screenshot.png" alt="Giao diện khóa học Moodle HCMUS">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Installation Methods -->
+  <section class="methods-section" id="instructions">
+    <div class="container">
+      <div class="section-head">
+        <h2>Hai phương thức sử dụng</h2>
+        <p>Chọn cách thức phù hợp nhất với nhu cầu sử dụng của bạn.</p>
+      </div>
+
+      <div class="methods-grid">
+        <!-- Method 1: Bookmarklet -->
+        <div class="method-card">
+          <span class="method-badge">Cách 1: Bookmarklet (Nhanh nhất)</span>
+          <h3>Dùng trực tiếp trên Bookmark</h3>
+          <p>Không cần cài đặt tiện ích, không cần bật chế độ Developer Mode. Hoạt động trên mọi trình duyệt (Chrome, Edge, Brave, Cốc Cốc).</p>
+          <ul class="steps-list">
+            <li class="step-entry">
+              <span class="step-idx">1</span>
+              <span>Bật thanh dấu trang trên trình duyệt (nhấn <code>Ctrl + Shift + B</code>).</span>
+            </li>
+            <li class="step-entry">
+              <span class="step-idx">2</span>
+              <span>Kéo nút <strong>Moodle Downloader</strong> ở trên thả vào thanh dấu trang.</span>
+            </li>
+            <li class="step-entry">
+              <span class="step-idx">3</span>
+              <span>Khi vào bất kỳ trang môn học nào trên Moodle, chỉ cần bấm vào Bookmark này để mở bảng tải tệp .ZIP.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Method 2: Extension -->
+        <div class="method-card">
+          <span class="method-badge">Cách 2: Chrome Extension</span>
+          <h3>Cài đặt Tiện ích mở rộng</h3>
+          <p>Tự động xuất hiện nút bấm tải tài liệu ngay góc dưới màn hình khi bạn truy cập trang khóa học.</p>
+          <ul class="steps-list">
+            <li class="step-entry">
+              <span class="step-idx">1</span>
+              <span>Tải tệp <code>moodle-downloader-extension.zip</code> và giải nén ra một thư mục.</span>
+            </li>
+            <li class="step-entry">
+              <span class="step-idx">2</span>
+              <span>Mở <code>chrome://extensions</code> và bật công tắc <strong>Developer mode</strong> ở góc phải.</span>
+            </li>
+            <li class="step-entry">
+              <span class="step-idx">3</span>
+              <span>Bấm <strong>Load unpacked</strong> và chọn thư mục vừa giải nén.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
   <section class="features-section">
     <div class="container">
-      <h2 class="section-title">Tính năng nổi bật</h2>
-      <div class="grid">
-        <div class="card">
-          <div class="card-icon">📦</div>
-          <h3>Nén trọn bộ thành file .ZIP</h3>
-          <p>Mặc định gom tất cả slide, bài giảng, đề thi vào 1 file zip duy nhất đặt tên theo môn học.</p>
+      <div class="feat-grid">
+        <div class="feat-card">
+          <h4>Nén tệp .ZIP tự động</h4>
+          <p>Tự động tổng hợp toàn bộ bài giảng, slide và tài liệu thành một tệp nén duy nhất đặt tên theo môn học.</p>
         </div>
-        <div class="card">
-          <div class="card-icon">📂</div>
-          <h3>Phân chia thư mục theo Tuần/Chương</h3>
-          <p>Bên trong file zip tự tạo sẵn folder <code>General/</code>, <code>WEEK 6/</code>, <code>WEEK 7/</code>... cực kỳ ngăn nắp.</p>
+        <div class="feat-card">
+          <h4>Phân thư mục theo tuần</h4>
+          <p>Bên trong tệp nén tự động tạo sẵn thư mục theo từng tuần (General, WEEK 1, WEEK 2...) rất ngăn nắp.</p>
         </div>
-        <div class="card">
-          <div class="card-icon">🎯</div>
-          <h3>Nút nổi trực tiếp trên trang Moodle</h3>
-          <p>Tự động xuất hiện nút <strong>[📥 Tải tài liệu]</strong> ngay góc màn hình khóa học, không cần thao tác phức tạp.</p>
+        <div class="feat-card">
+          <h4>Bảo toàn phiên đăng nhập</h4>
+          <p>Sử dụng trực tiếp session đăng nhập Moodle sẵn có của bạn trên trình duyệt mà không cần cung cấp mật khẩu.</p>
         </div>
-        <div class="card">
-          <div class="card-icon">🔒</div>
-          <h3>Giữ nguyên phiên đăng nhập</h3>
-          <p>Chạy trực tiếp với cookie session của bạn trên Chrome, không cần nhập lại mật khẩu hay lo lỗi CAS/SSO.</p>
-        </div>
-        <div class="card">
-          <div class="card-icon">⚡</div>
-          <h3>Tùy chọn tải riêng từng file</h3>
-          <p>Nếu không muốn nén zip, bạn chỉ cần bỏ tick chọn ZIP để tải từng file vào thư mục máy tính.</p>
-        </div>
-        <div class="card">
-          <div class="card-icon">🛡️</div>
-          <h3>Chống chặn spam tải</h3>
-          <p>Cơ chế tải thông minh có giãn cách nhẹ để không làm sập tab hay bị hệ thống Moodle giới hạn.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Installation Steps -->
-  <section class="steps-section">
-    <div class="container">
-      <h2 class="section-title">Hướng dẫn cài đặt Chrome Extension (3 bước)</h2>
-      <div class="step-list">
-        <div class="step-item">
-          <div class="step-number">1</div>
-          <div class="step-content">
-            <h4>Tải và giải nén tệp Extension</h4>
-            <p>Bấm nút <strong>"Tải Extension về máy (.ZIP)"</strong> ở trên và giải nén file ZIP ra một thư mục trên máy tính.</p>
-          </div>
-        </div>
-        <div class="step-item">
-          <div class="step-number">2</div>
-          <div class="step-content">
-            <h4>Mở trang quản lý Tiện ích trên Chrome</h4>
-            <p>Nhập <code>chrome://extensions</code> vào thanh địa chỉ và bật công tắc <strong>Developer mode (Chế độ cho nhà phát triển)</strong> ở góc trên bên phải.</p>
-          </div>
-        </div>
-        <div class="step-item">
-          <div class="step-number">3</div>
-          <div class="step-content">
-            <h4>Tải tiện ích đã giải nén</h4>
-            <p>Bấm nút <strong>Load unpacked (Tải tiện ích đã giải nén)</strong> và chọn thư mục bạn vừa giải nén ở bước 1. Xong!</p>
-          </div>
+        <div class="feat-card">
+          <h4>Tùy chọn tải riêng lẻ</h4>
+          <p>Dễ dàng bỏ tick tùy chọn nén ZIP nếu bạn muốn tải từng tệp trực tiếp vào máy tính.</p>
         </div>
       </div>
     </div>
@@ -412,9 +590,17 @@
   <!-- Footer -->
   <footer>
     <div class="container">
-      <p>Phát triển bởi <a href="https://github.com/1am1am" target="_blank">1am1am</a> • Trường ĐH Khoa học Tự nhiên, ĐHQG-HCM</p>
+      <p>Mã nguồn mở bởi <a href="https://github.com/1am1am" target="_blank">1am1am</a> • Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM</p>
     </div>
   </footer>
 
+  <script>
+    document.getElementById("copy-bm-btn").addEventListener("click", function() {
+      const code = document.getElementById("bm-link").getAttribute("href");
+      navigator.clipboard.writeText(code).then(function() {
+        alert("Đã sao chép mã Bookmarklet vào bộ nhớ tạm! Bạn có thể tạo dấu trang mới và dán vào ô URL.");
+      });
+    });
+  </script>
 </body>
 </html>

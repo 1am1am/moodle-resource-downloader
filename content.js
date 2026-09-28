@@ -1,4 +1,4 @@
-// content.js - Scans Moodle course pages and injects quick download UI with ZIP support
+// content.js - Scans Moodle course pages and injects minimal quick download UI with ZIP support
 
 (function () {
   // Prevent duplicate injection
@@ -173,7 +173,7 @@
         console.warn("Failed to fetch item for zip:", item.title, err);
       }
 
-      await new Promise((r) => setTimeout(r, 180));
+      await new Promise((r) => setTimeout(r, 150));
     }
 
     // Generate zip file
@@ -181,7 +181,7 @@
       current: items.length,
       total: items.length,
       currentFile: "Đang đóng gói...",
-      status: "Đang nén file ZIP..."
+      status: "Đang nén tệp .ZIP..."
     });
 
     const zipBlob = await zip.generateAsync(
@@ -196,7 +196,7 @@
           current: items.length,
           total: items.length,
           currentFile: `Nén ${pct}%`,
-          status: `Đang nén file ZIP: ${pct}%`
+          status: `Đang nén tệp .ZIP: ${pct}%`
         });
       }
     );
@@ -215,7 +215,7 @@
       current: items.length,
       total: items.length,
       currentFile: `${cleanCourse}.zip`,
-      status: `Đã hoàn tất tải file nén: ${cleanCourse}.zip!`,
+      status: `Đã hoàn tất tải tệp nén: ${cleanCourse}.zip`,
       isDone: true
     });
   }
@@ -225,11 +225,11 @@
     const data = scanCourseData();
     if (data.items.length === 0) return;
 
-    // Floating Button
+    // Floating Button (minimal slate style)
     const floatBtn = document.createElement("button");
     floatBtn.id = "moodle-dl-float-btn";
     floatBtn.innerHTML = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
         <polyline points="7 10 12 15 17 10"></polyline>
         <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -246,7 +246,7 @@
       <div class="moodle-dl-modal-content">
         <div class="moodle-dl-header">
           <div class="moodle-dl-header-title">
-            <span class="moodle-dl-badge">FIT & CTDA HCMUS</span>
+            <span class="moodle-dl-badge">Moodle Downloader</span>
             <h3 id="moodle-dl-course-title"></h3>
           </div>
           <button id="moodle-dl-close" class="moodle-dl-btn-close">&times;</button>
@@ -264,17 +264,17 @@
         </div>
 
         <div class="moodle-dl-options">
-          <label class="moodle-dl-checkbox-label moodle-dl-highlight">
+          <label class="moodle-dl-checkbox-label">
             <input type="checkbox" id="moodle-dl-opt-zip" checked>
-            <span><strong>📦 Nén toàn bộ thành file .ZIP</strong> (Mặc định)</span>
+            <span>Nén toàn bộ thành tệp .ZIP (Mặc định)</span>
           </label>
           <label class="moodle-dl-checkbox-label">
             <input type="checkbox" id="moodle-dl-opt-folders" checked>
-            <span>Tạo thư mục con theo tuần/chương</span>
+            <span>Tạo thư mục con theo tuần</span>
           </label>
           <label class="moodle-dl-checkbox-label">
             <input type="checkbox" id="moodle-dl-opt-index">
-            <span>Đánh số thứ tự file (01_, 02_...)</span>
+            <span>Đánh số thứ tự (01_, 02_...)</span>
           </label>
         </div>
 
@@ -285,14 +285,14 @@
             <div id="moodle-dl-progress-bar-fill" class="moodle-dl-progress-bar-fill"></div>
           </div>
           <div class="moodle-dl-progress-text">
-            <span id="moodle-dl-progress-status">Đang chuẩn bị tải...</span>
+            <span id="moodle-dl-progress-status">Đang chuẩn bị...</span>
             <span id="moodle-dl-progress-percent">0%</span>
           </div>
         </div>
 
         <div class="moodle-dl-footer">
           <button id="moodle-dl-btn-start" class="moodle-dl-btn-primary">
-            🚀 Tải các file đã chọn
+            Tải các tệp đã chọn
           </button>
         </div>
       </div>
@@ -303,7 +303,7 @@
     function renderList() {
       const currentData = scanCourseData();
       document.getElementById("moodle-dl-course-title").innerText = currentData.courseName;
-      document.getElementById("moodle-dl-count-badge").innerText = `Tìm thấy ${currentData.items.length} file`;
+      document.getElementById("moodle-dl-count-badge").innerText = `Tìm thấy ${currentData.items.length} tệp`;
 
       const listContainer = document.getElementById("moodle-dl-file-list");
       listContainer.innerHTML = "";
@@ -324,9 +324,9 @@
         groupHeader.innerHTML = `
           <label class="moodle-dl-checkbox-label moodle-dl-sec-title">
             <input type="checkbox" class="moodle-dl-sec-master-chk" data-section="${encodeURIComponent(section)}" checked>
-            <strong>${section}</strong>
+            <span>${section}</span>
           </label>
-          <span class="moodle-dl-sec-count">${sectionItems.length} file</span>
+          <span class="moodle-dl-sec-count">${sectionItems.length} tệp</span>
         `;
         groupEl.appendChild(groupHeader);
 
@@ -339,7 +339,6 @@
           itemRow.innerHTML = `
             <label class="moodle-dl-checkbox-label">
               <input type="checkbox" class="moodle-dl-item-chk" data-item-id="${item.id}" data-section="${encodeURIComponent(section)}" checked>
-              <span class="moodle-dl-item-icon">📄</span>
               <span class="moodle-dl-item-name" title="${item.title}">${item.title}</span>
             </label>
           `;
@@ -354,7 +353,6 @@
     }
 
     function attachEvents(currentData) {
-      // Master section checkboxes
       document.querySelectorAll(".moodle-dl-sec-master-chk").forEach((secChk) => {
         secChk.addEventListener("change", (e) => {
           const sec = e.target.getAttribute("data-section");
@@ -365,7 +363,6 @@
         });
       });
 
-      // Individual item checkboxes
       document.querySelectorAll(".moodle-dl-item-chk").forEach((itemChk) => {
         itemChk.addEventListener("change", () => {
           updateSelectedCount();
@@ -378,11 +375,10 @@
     function updateSelectedCount() {
       const selected = document.querySelectorAll(".moodle-dl-item-chk:checked").length;
       const startBtn = document.getElementById("moodle-dl-btn-start");
-      startBtn.innerText = `🚀 Tải các file đã chọn (${selected})`;
+      startBtn.innerText = `Tải các tệp đã chọn (${selected})`;
       startBtn.disabled = selected === 0;
     }
 
-    // Modal open/close events
     floatBtn.addEventListener("click", () => {
       renderList();
       modal.classList.remove("moodle-dl-hidden");
@@ -396,7 +392,6 @@
       if (e.target === modal) modal.classList.add("moodle-dl-hidden");
     });
 
-    // Select/Deselect all
     document.getElementById("moodle-dl-select-all").addEventListener("click", () => {
       document.querySelectorAll(".moodle-dl-item-chk, .moodle-dl-sec-master-chk").forEach((c) => (c.checked = true));
       updateSelectedCount();
@@ -407,7 +402,6 @@
       updateSelectedCount();
     });
 
-    // Start download button
     document.getElementById("moodle-dl-btn-start").addEventListener("click", async () => {
       const currentData = scanCourseData();
       const checkedIds = new Set(
@@ -416,7 +410,7 @@
       const selectedItems = currentData.items.filter((item) => checkedIds.has(item.id));
 
       if (selectedItems.length === 0) {
-        alert("Vui lòng chọn ít nhất 1 file để tải!");
+        alert("Vui lòng chọn ít nhất 1 tệp để tải!");
         return;
       }
 
@@ -424,7 +418,6 @@
       const useFolders = document.getElementById("moodle-dl-opt-folders").checked;
       const addIndex = document.getElementById("moodle-dl-opt-index").checked;
 
-      // Show progress box
       const progressBox = document.getElementById("moodle-dl-progress-box");
       const fill = document.getElementById("moodle-dl-progress-bar-fill");
       const statusText = document.getElementById("moodle-dl-progress-status");
@@ -434,7 +427,6 @@
       document.getElementById("moodle-dl-btn-start").disabled = true;
 
       if (isZip) {
-        // Zip Download
         await downloadAsZip({
           courseName: currentData.courseName,
           items: selectedItems,
@@ -451,7 +443,6 @@
           }
         });
       } else {
-        // Fallback: Individual downloads via background service worker
         chrome.runtime.sendMessage({
           action: "START_DOWNLOAD",
           data: {

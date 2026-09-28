@@ -2,7 +2,6 @@
 
 let courseData = { courseName: "", items: [] };
 
-// Sanitize filename & folder name
 function sanitize(name) {
   if (!name) return "unnamed";
   return name
@@ -83,14 +82,14 @@ async function downloadAsZip({ courseName, items, useFolders, addIndex, onProgre
       console.warn("Failed to fetch item for zip:", item.title, err);
     }
 
-    await new Promise((r) => setTimeout(r, 180));
+    await new Promise((r) => setTimeout(r, 150));
   }
 
   onProgress({
     current: items.length,
     total: items.length,
     currentFile: "Đang đóng gói...",
-    status: "Đang nén file ZIP..."
+    status: "Đang nén tệp .ZIP..."
   });
 
   const zipBlob = await zip.generateAsync(
@@ -105,7 +104,7 @@ async function downloadAsZip({ courseName, items, useFolders, addIndex, onProgre
         current: items.length,
         total: items.length,
         currentFile: `Nén ${pct}%`,
-        status: `Đang nén file ZIP: ${pct}%`
+        status: `Đang nén tệp .ZIP: ${pct}%`
       });
     }
   );
@@ -123,7 +122,7 @@ async function downloadAsZip({ courseName, items, useFolders, addIndex, onProgre
     current: items.length,
     total: items.length,
     currentFile: `${cleanCourse}.zip`,
-    status: `Đã hoàn tất tải: ${cleanCourse}.zip!`,
+    status: `Đã hoàn tất tải: ${cleanCourse}.zip`,
     isDone: true
   });
 }
@@ -144,7 +143,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const progressStatus = document.getElementById("progress-status");
   const progressPercent = document.getElementById("progress-percent");
 
-  // Query current active tab
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
   if (!tab || !tab.url || !tab.url.includes("/course/view.php")) {
@@ -156,11 +154,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   notMoodleView.classList.add("hidden");
   courseView.classList.remove("hidden");
 
-  // Fetch scan data from tab
   async function loadData() {
     try {
       courseNameEl.innerText = "Đang quét dữ liệu môn học...";
-      fileListEl.innerHTML = "<p style='padding: 12px; font-size: 13px; color: #64748b;'>Đang tải danh sách tài liệu...</p>";
+      fileListEl.innerHTML = "<p style='padding: 12px; font-size: 12px; color: #64748b;'>Đang tải danh sách tài liệu...</p>";
 
       let response = await new Promise((resolve) => {
         chrome.tabs.sendMessage(tab.id, { action: "SCAN_RESOURCES" }, (res) => {
@@ -185,15 +182,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (!response || response.items.length === 0) {
         courseNameEl.innerText = tab.title || "Moodle Course";
-        badgeCount.innerText = "0 file";
-        fileListEl.innerHTML = "<p style='padding: 12px; font-size: 13px; color: #64748b;'>Không tìm thấy file tài liệu nào trong khóa học này.</p>";
+        badgeCount.innerText = "0 tệp";
+        fileListEl.innerHTML = "<p style='padding: 12px; font-size: 12px; color: #64748b;'>Không tìm thấy tệp tài liệu nào trong khóa học này.</p>";
         startBtn.disabled = true;
         return;
       }
 
       courseData = response;
       courseNameEl.innerText = courseData.courseName;
-      badgeCount.innerText = `${courseData.items.length} file`;
+      badgeCount.innerText = `${courseData.items.length} tệp`;
       renderFiles();
     } catch (err) {
       console.error(err);
@@ -222,7 +219,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <input type="checkbox" class="sec-chk" data-sec="${encodeURIComponent(section)}" checked>
           <span>${section}</span>
         </label>
-        <span class="section-badge">${sectionItems.length} file</span>
+        <span class="section-badge">${sectionItems.length} tệp</span>
       `;
       groupEl.appendChild(header);
 
@@ -264,7 +261,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function updateCount() {
     const checkedCount = document.querySelectorAll(".item-chk:checked").length;
-    startBtn.innerText = `🚀 Tải các file đã chọn (${checkedCount})`;
+    startBtn.innerText = `Tải các tệp đã chọn (${checkedCount})`;
     startBtn.disabled = checkedCount === 0;
   }
 
@@ -280,7 +277,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   rescanBtn.addEventListener("click", loadData);
 
-  // Start Download
   startBtn.addEventListener("click", async () => {
     const checkedIds = new Set(
       Array.from(document.querySelectorAll(".item-chk:checked")).map((c) => c.getAttribute("data-id"))
@@ -299,7 +295,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     startBtn.disabled = true;
 
     if (isZip) {
-      // Download as ZIP
       await downloadAsZip({
         courseName: courseData.courseName,
         items: selectedItems,
@@ -314,8 +309,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       });
     } else {
-      // Fallback: Individual downloads via background service worker
-      progressStatus.innerText = "Đang bắt đầu tải từng file...";
+      progressStatus.innerText = "Đang bắt đầu tải từng tệp...";
       chrome.runtime.sendMessage({
         action: "START_DOWNLOAD",
         data: {
@@ -328,7 +322,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Listen for individual download progress updates from background.js
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.action === "DOWNLOAD_PROGRESS") {
       progressBox.classList.remove("hidden");

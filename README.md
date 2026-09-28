@@ -1,55 +1,54 @@
-# Moodle Course Resource Downloader (FIT@HCMUS & Moodle LMS)
+# Moodle Course Resource Downloader
 
-Extension hỗ trợ sinh viên tải toàn bộ tài liệu học tập (PDF, Slide, Bài giảng, Đề bài...) của một môn học trên trang Moodle của trường chỉ với **1 click**.
+Công cụ hỗ trợ tải toàn bộ tài liệu học tập (PDF, Slide, Bài giảng, Đề thi) của một môn học trên hệ thống Moodle (FIT@HCMUS, CTDA) thành một tệp `.ZIP` duy nhất.
 
----
-
-## 🌟 Tính năng nổi bật
-
-1. **Tự động quét tài liệu:** Tự nhận diện tên môn học, các phân mục (General, Ôn tập, WEEK 1, WEEK 2...).
-2. **Nút bấm trực quan trên trang:** Tự động gắn nút nổi `[ 📥 Tải tài liệu ]` ở góc dưới bên phải trang môn học.
-3. **Phân chia thư mục thông minh:** Tự động tạo thư mục tải về theo cấu trúc:
-   ```text
-   Downloads/
-   └── [Tên môn học]/
-       ├── General/
-       │   └── Course_Syllabus.pdf
-       ├── WEEK 6/
-       │   └── Bai06_Thiet_ke_CPU_LEGv8.pdf
-       └── WEEK 7/
-           └── Chap9_Storage_System.pdf
-   ```
-4. **Tùy chọn linh hoạt:**
-   - Chọn tất cả / Bỏ chọn từng file hoặc từng tuần.
-   - Bật/tắt phân chia thư mục con theo tuần/chương.
-   - Tùy chọn đánh số thứ tự file (`01_...`, `02_...`).
-5. **Chống nghẽn & giữ phiên đăng nhập:** Chạy trực tiếp qua Chrome Downloads API với session đăng nhập Moodle của bạn, có cơ chế delay nhẹ giữa các file để tránh bị Moodle chặn lượt truy cập nhanh.
+![Demo Moodle Course](screenshot.png)
 
 ---
 
-## 🚀 Hướng dẫn cài đặt vào Google Chrome (Chỉ mất 30 giây)
+## Tính năng
 
-1. Mở trình duyệt Google Chrome hoặc Microsoft Edge, Cốc Cốc, Brave.
-2. Nhập vào thanh địa chỉ:
+- **Nén toàn bộ thành tệp .ZIP:** Gom tất cả tài liệu vào một tệp nén duy nhất đặt tên theo môn học.
+- **Tự động phân thư mục theo tuần:** Bên trong tệp ZIP phân chia sẵn các thư mục con theo tuần/chương (`General/`, `WEEK 6/`, `WEEK 7/`...).
+- **Hai phương thức linh hoạt:** Sử dụng trực tiếp qua **Bookmarklet** (không cần cài đặt) hoặc cài đặt làm **Chrome Extension**.
+- **Tùy chọn tải riêng lẻ:** Bỏ chọn nén ZIP để tải từng tệp vào máy tính nếu muốn.
+- **Bảo toàn phiên đăng nhập:** Chạy trực tiếp với cookie session của trình duyệt, không cần đăng nhập lại hay lo lỗi SSO/CAS.
+
+---
+
+## Phương thức 1: Sử dụng Bookmarklet (Không cần cài đặt)
+
+Đây là cách nhanh nhất để sử dụng trên bất kỳ trình duyệt nào (Chrome, Edge, Brave, Cốc Cốc):
+
+1. Bật thanh Dấu trang của trình duyệt bằng tổ hợp phím `Ctrl + Shift + B`.
+2. Tạo một dấu trang mới trên thanh Dấu trang:
+   - **Tên:** `Moodle Downloader`
+   - **Địa chỉ (URL):** Dán đoạn mã sau:
+     ```javascript
+     javascript:(function(){var s=document.createElement('script');s.src='https://1am1am.github.io/moodle-resource-downloader/bookmarklet.js?t='+Date.now();document.head.appendChild(s);})();
+     ```
+3. Truy cập vào trang môn học bất kỳ trên Moodle (ví dụ: `courses.ctda.hcmus.edu.vn/course/view.php?id=...`).
+4. Nhấn vào dấu trang **Moodle Downloader** vừa tạo. Bảng điều khiển sẽ xuất hiện để bạn chọn và tải tệp .ZIP.
+
+---
+
+## Phương thức 2: Cài đặt Chrome Extension
+
+Dành cho người dùng muốn có nút bấm tự động xuất hiện ở góc trang web:
+
+1. Tải tệp `moodle-downloader-extension.zip` từ trang phát hành hoặc repository.
+2. Giải nén tệp zip ra một thư mục trên máy tính.
+3. Mở trình duyệt Chrome và truy cập:
    ```text
    chrome://extensions
    ```
-   (và nhấn **Enter**).
-3. Bật công tắc **Developer mode (Chế độ dành cho nhà phát triển)** ở góc trên bên phải màn hình.
-4. Bấm vào nút **Load unpacked (Tải tiện ích đã giải nén)** ở góc trên bên trái.
-5. Chọn thư mục chứa tiện ích:
-   ```text
-   C:\Users\Lam\.gemini\antigravity\scratch\moodle-downloader-extension
-   ```
-6. Tiện ích **Moodle Course Resource Downloader** sẽ xuất hiện trên danh sách extension của bạn!
+4. Bật công tắc **Developer mode (Chế độ cho nhà phát triển)** ở góc trên bên phải.
+5. Nhấn nút **Load unpacked (Tải tiện ích đã giải nén)** và chọn thư mục vừa giải nén.
+6. Mở trang khóa học Moodle và nhấn `F5` để thấy nút **Tải tài liệu** ở góc dưới bên phải màn hình.
 
 ---
 
-## 📖 Cách sử dụng
+## Trang chủ và Hướng dẫn trực quan
 
-1. Truy cập vào trang môn học trên Moodle (ví dụ: `https://courses.ctda.hcmus.edu.vn/course/view.php?id=4907`).
-2. Nếu trang đang mở sẵn trước khi cài extension, hãy bấm **F5 (Tải lại trang)**.
-3. Bạn sẽ thấy 2 cách để tải:
-   - **Cách 1:** Nhìn xuống góc dưới bên phải màn hình web, bạn sẽ thấy nút xanh nổi **`[ 📥 Tải tài liệu (X) ]`**. Bấm vào để mở bảng chọn và tải.
-   - **Cách 2:** Bấm vào biểu tượng tiện ích trên thanh công cụ của Chrome (Extension Toolbar).
-4. Xem danh sách các file được gom nhóm theo từng tuần, chọn các file muốn tải và bấm **🚀 Tải các file đã chọn**.
+Xem trang giới thiệu và trải nghiệm kéo thả Bookmarklet tại:
+👉 [https://1am1am.github.io/moodle-resource-downloader/](https://1am1am.github.io/moodle-resource-downloader/)
