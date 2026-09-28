@@ -20,6 +20,12 @@ function sanitize(name) {
     .substring(0, 120);
 }
 
+// Clean and prevent duplicate extensions like .pdf.pdf or .txt.txt
+function fixDuplicateExtension(name) {
+  if (!name) return "file";
+  return name.replace(/(\.[a-zA-Z0-9]{2,5})\1+$/i, "$1");
+}
+
 // Extract file extension and filename from URL or Content-Disposition
 async function resolveFileInfo(url, fallbackTitle) {
   try {
@@ -31,7 +37,6 @@ async function resolveFileInfo(url, fallbackTitle) {
     let detectedName = "";
     const disposition = response.headers.get("content-disposition");
     if (disposition) {
-      // filename*=UTF-8''... or filename="..."
       const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
       if (utfMatch && utfMatch[1]) {
         detectedName = decodeURIComponent(utfMatch[1]);
@@ -54,31 +59,27 @@ async function resolveFileInfo(url, fallbackTitle) {
       } catch (e) {}
     }
 
-    // Extract extension
     let ext = "";
     if (detectedName && detectedName.includes(".")) {
       ext = detectedName.substring(detectedName.lastIndexOf(".")).toLowerCase();
     }
 
-    // If title already has an extension
-    if (fallbackTitle && /\.[a-zA-Z0-9]{2,5}$/i.test(fallbackTitle)) {
-      return { finalName: fallbackTitle, ext: "" };
+    let finalName = detectedName || fallbackTitle || "file";
+    if (ext && !finalName.toLowerCase().endsWith(ext)) {
+      finalName += ext;
     }
 
-    return {
-      finalName: (detectedName || fallbackTitle) + (ext && !fallbackTitle.endsWith(ext) ? ext : ""),
-      ext: ext
-    };
+    finalName = fixDuplicateExtension(finalName);
+    return { finalName, ext };
   } catch (err) {
-    // If HEAD request fails, fallback safely
-    let ext = "";
-    if (fallbackTitle.toLowerCase().includes("pdf") || fallbackTitle.toLowerCase().includes("syllabus")) {
-      ext = ".pdf";
+    let finalName = fallbackTitle || "file";
+    if (!/\.[a-zA-Z0-9]{2,5}$/i.test(finalName)) {
+      if (finalName.toLowerCase().includes("pdf") || finalName.toLowerCase().includes("slide")) {
+        finalName += ".pdf";
+      }
     }
-    return {
-      finalName: fallbackTitle + (fallbackTitle.endsWith(ext) ? "" : ext),
-      ext: ext
-    };
+    finalName = fixDuplicateExtension(finalName);
+    return { finalName, ext: "" };
   }
 }
 
@@ -106,23 +107,20 @@ async function processDownloads({ courseName, items, useFolders = true, addIndex
     broadcastProgress();
 
     try {
-      // Add redirect=1 for Moodle resource links if not already present
       let downloadUrl = item.url;
       if (downloadUrl.includes("/mod/resource/view.php") && !downloadUrl.includes("redirect=1")) {
         downloadUrl += (downloadUrl.includes("?") ? "&" : "?") + "redirect=1";
       }
 
-      // Resolve real file info
       const info = await resolveFileInfo(downloadUrl, item.title);
       let filename = sanitize(info.finalName || item.title);
+      filename = fixDuplicateExtension(filename);
 
-      // Add index prefix if requested (e.g. 01_Syllabus.pdf)
       if (addIndex) {
         const prefix = String(i + 1).padStart(2, "0");
         filename = `${prefix}_${filename}`;
       }
 
-      // Structure directories
       const cleanSection = sanitize(item.section || "Chung");
       let fullPath = "";
       if (useFolders) {
@@ -131,8 +129,7 @@ async function processDownloads({ courseName, items, useFolders = true, addIndex
         fullPath = `${cleanCourse}/${filename}`;
       }
 
-      // Trigger download via chrome.downloads API
-      await new Promise((resolve, reject) => {
+      await new Promise((resolve) => {
         chrome.downloads.download(
           {
             url: downloadUrl,
@@ -143,7 +140,7 @@ async function processDownloads({ courseName, items, useFolders = true, addIndex
             if (chrome.runtime.lastError) {
               console.warn("Download error for:", fullPath, chrome.runtime.lastError.message);
               downloadState.errors.push({ file: item.title, error: chrome.runtime.lastError.message });
-              resolve(); // Continue with next file
+              resolve();
             } else {
               resolve(downloadId);
             }
@@ -151,7 +148,6 @@ async function processDownloads({ courseName, items, useFolders = true, addIndex
         );
       });
 
-      // Pause briefly between downloads to prevent flooding the browser
       await new Promise((r) => setTimeout(r, 650));
     } catch (err) {
       console.error("Error processing item:", item, err);
@@ -173,7 +169,6 @@ function broadcastProgress(isDone = false) {
     isDone
   };
 
-  // Notify extension popups or content scripts
   chrome.runtime.sendMessage(payload).catch(() => {});
   chrome.tabs.query({ active: true }, (tabs) => {
     tabs.forEach((tab) => {
@@ -182,11 +177,10 @@ function broadcastProgress(isDone = false) {
   });
 }
 
-// Message Listener
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "START_DOWNLOAD") {
     processDownloads(message.data).then(sendResponse);
-    return true; // Keep channel open for async response
+    return true;
   }
 
   if (message.action === "GET_STATUS") {
