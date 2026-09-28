@@ -1,6 +1,5 @@
-// bookmarklet.js - Moodle Course Downloader Bookmarklet
+// bookmarklet.js - Moodle Course Downloader Bookmarklet (Interactive & Feature-rich)
 (function () {
-  // Always clean up any existing modal to guarantee a fresh scan & render
   const oldModal = document.getElementById("moodle-dl-modal");
   if (oldModal) oldModal.remove();
 
@@ -22,6 +21,25 @@
     return clone.textContent.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
   }
 
+  function cleanSectionTitle(title) {
+    if (!title) return "Tài liệu chung (General)";
+    return title
+      .replace(/(Collapse|Expand)\s*all/gi, "")
+      .replace(/(Thu gọn|Mở rộng)\s*tất cả/gi, "")
+      .replace(/\s+/g, " ")
+      .trim() || "Tài liệu chung";
+  }
+
+  function detectFileType(title, url) {
+    const str = (title + " " + url).toLowerCase();
+    if (str.includes(".pdf") || str.includes("pdf")) return "PDF";
+    if (str.includes(".doc") || str.includes(".docx")) return "DOC";
+    if (str.includes(".ppt") || str.includes(".pptx")) return "PPT";
+    if (str.includes(".zip") || str.includes(".rar") || str.includes(".7z")) return "ZIP";
+    if (str.includes(".txt")) return "TXT";
+    return "TỆP";
+  }
+
   function fixDuplicateExtension(name) {
     if (!name) return "file";
     return name.replace(/(\.[a-zA-Z0-9]{2,5})\1+$/i, "$1");
@@ -39,7 +57,6 @@
     document.head.appendChild(s);
   }
 
-  // Scan current Moodle page
   let courseName = "";
   const titleSelectors = [
     ".page-header-headings h1",
@@ -57,7 +74,6 @@
   }
   if (!courseName) courseName = document.title.split("|")[0].split("-")[0].trim() || "Moodle Course";
 
-  // Find all resource links
   const resourceLinks = Array.from(
     document.querySelectorAll('a[href*="/mod/resource/view.php"], a[href*="/mod/folder/view.php"], a[href*="/pluginfile.php/"]')
   ).filter((a) => !a.closest(".courseindex, #nav-drawer, .drawer, nav, aside"));
@@ -77,13 +93,13 @@
     title = title.replace(/^(File|Tập tin|Tệp|Tài liệu|Folder|Thư mục|PDF document|Document)\s*/i, "");
     title = fixDuplicateExtension(title);
 
-    let sectionName = "Chung (General)";
+    let sectionName = "Tài liệu chung (General)";
     const secEl = link.closest("[data-sectionid], .course-section, li.section.main, li.section, div.section");
     if (secEl) {
       const secTitle = secEl.querySelector(".sectionname, .section-title, h3, h4, [data-for='section_title']");
       if (secTitle) {
         const t = getCleanText(secTitle);
-        if (t) sectionName = t;
+        if (t) sectionName = cleanSectionTitle(t);
       }
     }
 
@@ -91,7 +107,8 @@
       id: `bm_item_${idx}`,
       title: title,
       url: rawUrl,
-      section: sectionName
+      section: sectionName,
+      type: detectFileType(title, rawUrl)
     });
   });
 
@@ -100,10 +117,8 @@
     return;
   }
 
-  // Pre-load JSZip in background
   loadJSZip(() => {});
 
-  // Inject Styles (Desaturated, clean slate palette, no emojis)
   if (!document.getElementById("moodle-dl-styles")) {
     const style = document.createElement("style");
     style.id = "moodle-dl-styles";
@@ -117,13 +132,13 @@
       }
       #moodle-dl-modal.moodle-dl-hidden { display: none !important; }
       .moodle-dl-content {
-        background: #ffffff; border-radius: 12px; width: 92%; max-width: 620px;
-        max-height: 85vh; display: flex; flex-direction: column;
+        background: #ffffff; border-radius: 12px; width: 92%; max-width: 640px;
+        max-height: 88vh; display: flex; flex-direction: column;
         box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
         border: 1px solid #e2e8f0; overflow: hidden;
       }
       .moodle-dl-header {
-        padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display: flex;
+        padding: 16px 22px; border-bottom: 1px solid #e2e8f0; display: flex;
         justify-content: space-between; align-items: center; background: #f8fafc;
       }
       .moodle-dl-badge {
@@ -138,59 +153,54 @@
       .moodle-dl-close:hover { background: #e2e8f0; color: #0f172a; }
       .moodle-dl-toolbar {
         display: flex; justify-content: space-between; align-items: center;
-        padding: 10px 20px; background: #ffffff; border-bottom: 1px solid #f1f5f9; font-size: 13px;
+        padding: 10px 22px; background: #ffffff; border-bottom: 1px solid #f1f5f9; font-size: 12px; flex-wrap: wrap; gap: 8px;
       }
-      .moodle-dl-link {
-        background: none; border: none; color: #2563eb; font-size: 12px;
-        font-weight: 600; cursor: pointer; padding: 2px;
+      .moodle-dl-filter-group { display: flex; align-items: center; gap: 6px; }
+      .moodle-dl-filter-btn {
+        background: #f1f5f9; border: 1px solid #e2e8f0; color: #334155;
+        font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; cursor: pointer; transition: all 0.15s ease;
       }
-      .moodle-dl-link:hover { text-decoration: underline; }
+      .moodle-dl-filter-btn:hover { background: #e2e8f0; color: #0f172a; }
+      .moodle-dl-filter-btn.active { background: #0f172a; color: #ffffff; border-color: #0f172a; }
       .moodle-dl-options {
-        padding: 10px 20px; background: #f8fafc; display: flex; gap: 16px;
-        border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #334155; flex-wrap: wrap;
+        padding: 10px 22px; background: #f8fafc; display: flex; gap: 16px;
+        border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #334155; flex-wrap: wrap;
       }
-      .moodle-dl-label {
-        display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;
-      }
-      .moodle-dl-label input[type="checkbox"] {
-        width: 15px; height: 15px; accent-color: #0f172a; cursor: pointer; margin: 0;
-      }
-      .moodle-dl-list { padding: 12px 20px; overflow-y: auto; flex: 1; max-height: 360px; }
-      .moodle-dl-group {
-        margin-bottom: 12px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;
-      }
+      .moodle-dl-label { display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; }
+      .moodle-dl-label input[type="checkbox"] { width: 14px; height: 14px; accent-color: #0f172a; cursor: pointer; margin: 0; }
+      .moodle-dl-list { padding: 12px 22px; overflow-y: auto; flex: 1; max-height: 380px; }
+      .moodle-dl-group { margin-bottom: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff; }
       .moodle-dl-gh {
         display: flex; justify-content: space-between; align-items: center;
         padding: 8px 12px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; font-size: 13px; font-weight: 600;
       }
+      .moodle-dl-toggle-btn {
+        background: none; border: none; cursor: pointer; color: #64748b; font-size: 11px; padding: 2px 4px; border-radius: 4px;
+      }
+      .moodle-dl-toggle-btn:hover { background: #e2e8f0; color: #0f172a; }
+      .moodle-dl-items { padding: 4px 12px; }
+      .moodle-dl-items.collapsed { display: none !important; }
       .moodle-dl-item {
-        padding: 7px 12px; border-bottom: 1px solid #f8fafc; font-size: 13px; color: #334155;
-        display: flex; align-items: center; gap: 8px;
+        padding: 6px 0; border-bottom: 1px solid #f8fafc; font-size: 13px; color: #334155;
+        display: flex; align-items: center; justify-content: space-between;
       }
       .moodle-dl-item:last-child { border-bottom: none; }
-      .moodle-dl-item-text {
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 440px;
+      .moodle-dl-item-left { display: flex; align-items: center; gap: 8px; overflow: hidden; flex: 1; }
+      .moodle-dl-item-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 440px; }
+      .moodle-dl-type-badge {
+        font-size: 10px; font-weight: 700; color: #475569; background: #f1f5f9; border: 1px solid #e2e8f0;
+        padding: 1px 4px; border-radius: 3px; flex-shrink: 0; text-transform: uppercase;
       }
-      .moodle-dl-progress {
-        padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0;
-      }
-      .moodle-dl-bar-bg {
-        width: 100%; height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin-bottom: 6px;
-      }
-      .moodle-dl-bar-fill {
-        height: 100%; width: 0%; background: #0f172a; border-radius: 99px; transition: width 0.2s;
-      }
-      .moodle-dl-bar-text {
-        display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: #475569;
-      }
+      .moodle-dl-progress { padding: 12px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; }
+      .moodle-dl-bar-bg { width: 100%; height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin-bottom: 6px; }
+      .moodle-dl-bar-fill { height: 100%; width: 0%; background: #0f172a; border-radius: 99px; transition: width 0.2s; }
+      .moodle-dl-bar-text { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: #475569; }
       .moodle-dl-footer {
-        padding: 12px 20px; border-top: 1px solid #e2e8f0; background: #ffffff;
-        display: flex; justify-content: flex-end;
+        padding: 12px 22px; border-top: 1px solid #e2e8f0; background: #ffffff; display: flex; justify-content: flex-end;
       }
       .moodle-dl-btn {
-        background: #0f172a; color: #ffffff; border: 1px solid #0f172a;
-        border-radius: 6px; padding: 8px 18px; font-size: 13px; font-weight: 600;
-        cursor: pointer; transition: background 0.15s;
+        background: #0f172a; color: #ffffff; border: 1px solid #0f172a; border-radius: 6px;
+        padding: 9px 20px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s;
       }
       .moodle-dl-btn:hover:not(:disabled) { background: #1e293b; }
       .moodle-dl-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -198,7 +208,6 @@
     document.head.appendChild(style);
   }
 
-  // Build Modal HTML
   const modal = document.createElement("div");
   modal.id = "moodle-dl-modal";
   modal.innerHTML = `
@@ -210,24 +219,35 @@
         </div>
         <button class="moodle-dl-close" id="bm-close">&times;</button>
       </div>
+
+      <!-- Quick Filter Toolbar -->
       <div class="moodle-dl-toolbar">
         <span style="font-weight:600; color:#475569;">Tìm thấy ${items.length} tệp</span>
-        <div>
-          <button class="moodle-dl-link" id="bm-sel-all">Chọn tất cả</button>
-          <span style="color:#cbd5e1; margin:0 4px;">|</span>
-          <button class="moodle-dl-link" id="bm-desel-all">Bỏ chọn</button>
+        <div class="moodle-dl-filter-group">
+          <span style="font-size:11px; color:#64748b; margin-right:2px;">Lọc nhanh:</span>
+          <button class="moodle-dl-filter-btn active" data-filter="all">Tất cả</button>
+          <button class="moodle-dl-filter-btn" data-filter="slides">Chỉ Slide / Bài giảng</button>
+          <button class="moodle-dl-filter-btn" data-filter="exercises">Chỉ Bài tập / Lab</button>
+          <button class="moodle-dl-filter-btn" data-filter="none">Bỏ chọn</button>
         </div>
       </div>
+
+      <!-- Options Bar -->
       <div class="moodle-dl-options">
         <label class="moodle-dl-label">
           <input type="checkbox" id="bm-opt-zip" checked>
-          <span>Nén thành tệp .ZIP (Mặc định)</span>
+          <span>Nén thành tệp .ZIP</span>
         </label>
         <label class="moodle-dl-label">
           <input type="checkbox" id="bm-opt-folders" checked>
-          <span>Tạo thư mục theo tuần</span>
+          <span>Phân chia thư mục theo chương/tuần</span>
+        </label>
+        <label class="moodle-dl-label">
+          <input type="checkbox" id="bm-opt-index">
+          <span>Đánh số thứ tự (01_, 02_...)</span>
         </label>
       </div>
+
       <div class="moodle-dl-list" id="bm-list"></div>
       <div class="moodle-dl-progress moodle-dl-hidden" id="bm-pbox" style="display:none;">
         <div class="moodle-dl-bar-bg"><div class="moodle-dl-bar-fill" id="bm-pfill"></div></div>
@@ -240,7 +260,6 @@
   `;
   document.body.appendChild(modal);
 
-  // Group items by section
   const listEl = document.getElementById("bm-list");
   const groups = {};
   items.forEach((it) => {
@@ -259,19 +278,28 @@
         <input type="checkbox" class="bm-sec-chk" data-sec="${encodeURIComponent(sec)}" checked>
         <span>${sec}</span>
       </label>
-      <span style="font-size:11px; color:#64748b; font-weight:normal;">${secItems.length} tệp</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:11px; color:#64748b; font-weight:normal;">${secItems.length} tệp</span>
+        <button class="moodle-dl-toggle-btn" data-sec-btn="${encodeURIComponent(sec)}">Thu gọn</button>
+      </div>
     `;
     g.appendChild(gh);
 
     const body = document.createElement("div");
+    body.className = "moodle-dl-items";
+    body.setAttribute("data-sec-items", encodeURIComponent(sec));
+
     secItems.forEach((it) => {
       const row = document.createElement("div");
       row.className = "moodle-dl-item";
       row.innerHTML = `
-        <label class="moodle-dl-label">
-          <input type="checkbox" class="bm-chk" data-id="${it.id}" data-sec="${encodeURIComponent(sec)}" checked>
-          <span class="moodle-dl-item-text" title="${it.title}">${it.title}</span>
-        </label>
+        <div class="moodle-dl-item-left">
+          <label class="moodle-dl-label">
+            <input type="checkbox" class="bm-chk" data-id="${it.id}" data-title="${encodeURIComponent(it.title)}" data-sec="${encodeURIComponent(sec)}" checked>
+            <span class="moodle-dl-item-text" title="${it.title}">${it.title}</span>
+          </label>
+        </div>
+        <span class="moodle-dl-type-badge">${it.type}</span>
       `;
       body.appendChild(row);
     });
@@ -287,7 +315,19 @@
     b.disabled = cnt === 0;
   }
 
-  // Master section checkboxes
+  // Toggle collapse/expand for sections
+  document.querySelectorAll(".moodle-dl-toggle-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const s = e.target.getAttribute("data-sec-btn");
+      const target = document.querySelector(`[data-sec-items="${s}"]`);
+      if (target) {
+        target.classList.toggle("collapsed");
+        e.target.innerText = target.classList.contains("collapsed") ? "Mở rộng" : "Thu gọn";
+      }
+    });
+  });
+
+  // Section master checkboxes
   document.querySelectorAll(".bm-sec-chk").forEach((secChk) => {
     secChk.addEventListener("change", (e) => {
       const s = e.target.getAttribute("data-sec");
@@ -297,6 +337,39 @@
   });
 
   document.querySelectorAll(".bm-chk").forEach((c) => c.addEventListener("change", updateBtn));
+
+  // Quick filter buttons
+  document.querySelectorAll(".moodle-dl-filter-btn").forEach((fBtn) => {
+    fBtn.addEventListener("click", (e) => {
+      document.querySelectorAll(".moodle-dl-filter-btn").forEach((b) => b.classList.remove("active"));
+      e.target.classList.add("active");
+      const filter = e.target.getAttribute("data-filter");
+
+      document.querySelectorAll(".bm-chk").forEach((chk) => {
+        const rawTitle = decodeURIComponent(chk.getAttribute("data-title") || "").toLowerCase();
+        if (filter === "all") {
+          chk.checked = true;
+        } else if (filter === "slides") {
+          chk.checked = /slide|bai\s*giang|chap|lec|ly\s*thuyet|overview|tong\s*quan/i.test(rawTitle);
+        } else if (filter === "exercises") {
+          chk.checked = /bai\s*tap|lab|btvn|assign|exercise|de\s*thi|on\s*tap|thuc\s*hanh/i.test(rawTitle);
+        } else if (filter === "none") {
+          chk.checked = false;
+        }
+      });
+
+      // Sync section master checkboxes
+      document.querySelectorAll(".bm-sec-chk").forEach((secChk) => {
+        const s = secChk.getAttribute("data-sec");
+        const all = document.querySelectorAll(`.bm-chk[data-sec="${s}"]`);
+        const checked = document.querySelectorAll(`.bm-chk[data-sec="${s}"]:checked`);
+        secChk.checked = all.length > 0 && all.length === checked.length;
+      });
+
+      updateBtn();
+    });
+  });
+
   updateBtn();
 
   document.getElementById("bm-close").onclick = () => modal.remove();
@@ -304,16 +377,6 @@
     if (e.target === modal) modal.remove();
   };
 
-  document.getElementById("bm-sel-all").onclick = () => {
-    document.querySelectorAll(".bm-chk, .bm-sec-chk").forEach((c) => (c.checked = true));
-    updateBtn();
-  };
-  document.getElementById("bm-desel-all").onclick = () => {
-    document.querySelectorAll(".bm-chk, .bm-sec-chk").forEach((c) => (c.checked = false));
-    updateBtn();
-  };
-
-  // Start Download
   document.getElementById("bm-start").onclick = async () => {
     const checkedIds = new Set(Array.from(document.querySelectorAll(".bm-chk:checked")).map((c) => c.getAttribute("data-id")));
     const selected = items.filter((i) => checkedIds.has(i.id));
@@ -321,6 +384,8 @@
 
     const isZip = document.getElementById("bm-opt-zip").checked;
     const useFolders = document.getElementById("bm-opt-folders").checked;
+    const addIndex = document.getElementById("bm-opt-index").checked;
+
     const pbox = document.getElementById("bm-pbox");
     const pfill = document.getElementById("bm-pfill");
     const pstatus = document.getElementById("bm-pstatus");
@@ -329,11 +394,10 @@
     pbox.style.display = "block";
     document.getElementById("bm-start").disabled = true;
 
-    // Check if JSZip is available
     if (isZip) {
       loadJSZip(async (zipLib) => {
         if (!zipLib) {
-          alert("Không thể tải thư viện nén ZIP. Đang chuyển sang chế độ tải từng tệp...");
+          alert("Không thể tải thư viện nén ZIP. Đang chuyển sang tải từng tệp...");
           downloadIndividually();
           return;
         }
@@ -356,7 +420,6 @@
             const res = await fetch(u, { credentials: "include" });
             const buf = await res.arrayBuffer();
 
-            // Resolve extension
             let fname = it.title;
             const disposition = res.headers.get("content-disposition");
             if (disposition) {
@@ -378,6 +441,10 @@
             let baseName = sanitize(it.title);
             if (!baseName.toLowerCase().endsWith(ext)) baseName += ext;
             baseName = fixDuplicateExtension(baseName);
+
+            if (addIndex) {
+              baseName = `${String(i + 1).padStart(2, "0")}_${baseName}`;
+            }
 
             if (useFolders) {
               zip.folder(sanitize(it.section)).file(baseName, buf);

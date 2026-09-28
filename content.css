@@ -27,11 +27,6 @@
   transform: translateY(-1px);
 }
 
-#moodle-dl-float-btn svg {
-  flex-shrink: 0;
-}
-
-/* Modal Overlay */
 #moodle-dl-modal {
   position: fixed;
   top: 0;
@@ -55,8 +50,8 @@
   background: #ffffff;
   border-radius: 12px;
   width: 90%;
-  max-width: 620px;
-  max-height: 85vh;
+  max-width: 640px;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
@@ -78,7 +73,7 @@
 
 /* Header */
 .moodle-dl-header {
-  padding: 16px 20px;
+  padding: 16px 22px;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
@@ -107,7 +102,7 @@
 .moodle-dl-btn-close {
   background: transparent;
   border: none;
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1;
   color: #64748b;
   cursor: pointer;
@@ -120,49 +115,61 @@
   color: #0f172a;
 }
 
-/* Toolbar */
+/* Quick Filter Toolbar */
 .moodle-dl-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
+  padding: 10px 22px;
   background: #ffffff;
   border-bottom: 1px solid #f1f5f9;
+  font-size: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .moodle-dl-stats {
-  font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: #475569;
 }
 
-.moodle-dl-btn-link {
-  background: none;
-  border: none;
-  color: #2563eb;
-  font-size: 12px;
+.moodle-dl-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.moodle-dl-filter-btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 11px;
   font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
   cursor: pointer;
-  padding: 2px;
+  transition: all 0.15s ease;
 }
 
-.moodle-dl-btn-link:hover {
-  text-decoration: underline;
+.moodle-dl-filter-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
-.moodle-dl-divider {
-  color: #cbd5e1;
-  margin: 0 4px;
+.moodle-dl-filter-btn.active {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
 }
 
-/* Options */
+/* Options Bar */
 .moodle-dl-options {
-  padding: 10px 20px;
+  padding: 10px 22px;
   background: #f8fafc;
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: 12px;
   color: #334155;
   border-bottom: 1px solid #e2e8f0;
 }
@@ -170,15 +177,15 @@
 .moodle-dl-checkbox-label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
   user-select: none;
   margin: 0;
 }
 
 .moodle-dl-checkbox-label input[type="checkbox"] {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   accent-color: #0f172a;
   cursor: pointer;
   margin: 0;
@@ -186,17 +193,18 @@
 
 /* File list */
 .moodle-dl-file-list {
-  padding: 12px 20px;
+  padding: 12px 22px;
   overflow-y: auto;
   flex: 1;
-  max-height: 360px;
+  max-height: 380px;
 }
 
 .moodle-dl-section-group {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   overflow: hidden;
+  background: #ffffff;
 }
 
 .moodle-dl-section-header {
@@ -206,6 +214,7 @@
   padding: 8px 12px;
   background: #f1f5f9;
   border-bottom: 1px solid #e2e8f0;
+  user-select: none;
 }
 
 .moodle-dl-sec-title {
@@ -214,22 +223,58 @@
   color: #0f172a;
 }
 
+.moodle-dl-sec-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .moodle-dl-sec-count {
   font-size: 11px;
   color: #64748b;
+}
+
+.moodle-dl-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.moodle-dl-toggle-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 .moodle-dl-section-items {
   padding: 4px 12px;
 }
 
+.moodle-dl-section-items.collapsed {
+  display: none !important;
+}
+
 .moodle-dl-item-row {
   padding: 6px 0;
   border-bottom: 1px solid #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .moodle-dl-item-row:last-child {
   border-bottom: none;
+}
+
+.moodle-dl-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  flex: 1;
 }
 
 .moodle-dl-item-name {
@@ -241,9 +286,21 @@
   max-width: 440px;
 }
 
+.moodle-dl-type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 1px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
 /* Progress Box */
 .moodle-dl-progress-box {
-  padding: 12px 20px;
+  padding: 12px 22px;
   background: #f8fafc;
   border-top: 1px solid #e2e8f0;
 }
@@ -275,7 +332,7 @@
 
 /* Footer */
 .moodle-dl-footer {
-  padding: 12px 20px;
+  padding: 12px 22px;
   border-top: 1px solid #e2e8f0;
   background: #ffffff;
   display: flex;
@@ -287,7 +344,7 @@
   color: #ffffff;
   border: 1px solid #0f172a;
   border-radius: 6px;
-  padding: 8px 18px;
+  padding: 9px 20px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;

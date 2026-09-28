@@ -1,4 +1,4 @@
-// content.js - Scans Moodle course pages and injects minimal quick download UI with ZIP support
+// content.js - Scans Moodle course pages with business logic options & quick filters
 
 (function () {
   if (window.__moodleDownloaderInjected) return;
@@ -20,6 +20,25 @@
     const clone = element.cloneNode(true);
     clone.querySelectorAll(".accesshide, .sr-only, img, svg, .activityiconcontainer").forEach((el) => el.remove());
     return clone.textContent.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  function cleanSectionTitle(title) {
+    if (!title) return "Tài liệu chung (General)";
+    return title
+      .replace(/(Collapse|Expand)\s*all/gi, "")
+      .replace(/(Thu gọn|Mở rộng)\s*tất cả/gi, "")
+      .replace(/\s+/g, " ")
+      .trim() || "Tài liệu chung";
+  }
+
+  function detectFileType(title, url) {
+    const str = (title + " " + url).toLowerCase();
+    if (str.includes(".pdf") || str.includes("pdf")) return "PDF";
+    if (str.includes(".doc") || str.includes(".docx")) return "DOC";
+    if (str.includes(".ppt") || str.includes(".pptx")) return "PPT";
+    if (str.includes(".zip") || str.includes(".rar") || str.includes(".7z")) return "ZIP";
+    if (str.includes(".txt")) return "TXT";
+    return "TỆP";
   }
 
   function fixDuplicateExtension(name) {
@@ -67,13 +86,13 @@
       title = title.replace(/^(File|Tập tin|Tệp|Tài liệu|Folder|Thư mục|PDF document|Document)\s*/i, "");
       title = fixDuplicateExtension(title);
 
-      let sectionName = "Chung (General)";
+      let sectionName = "Tài liệu chung (General)";
       const sectionEl = link.closest("[data-sectionid], .course-section, li.section.main, li.section, div.section");
       if (sectionEl) {
         const secTitleEl = sectionEl.querySelector(".sectionname, .section-title, h3, h4, [data-for='section_title']");
         if (secTitleEl) {
           const secText = getCleanText(secTitleEl);
-          if (secText) sectionName = secText;
+          if (secText) sectionName = cleanSectionTitle(secText);
         }
       }
 
@@ -82,7 +101,7 @@
         title: title,
         url: rawUrl,
         section: sectionName,
-        type: rawUrl.includes("/mod/folder/") ? "folder" : "file"
+        type: detectFileType(title, rawUrl)
       });
     });
 
@@ -229,25 +248,29 @@
           <button id="moodle-dl-close" class="moodle-dl-btn-close">&times;</button>
         </div>
 
+        <!-- Quick Filters -->
         <div class="moodle-dl-toolbar">
           <div class="moodle-dl-stats">
             <span id="moodle-dl-count-badge">Tìm thấy ${data.items.length} tệp</span>
           </div>
-          <div class="moodle-dl-selection-actions">
-            <button id="moodle-dl-select-all" class="moodle-dl-btn-link">Chọn tất cả</button>
-            <span class="moodle-dl-divider">|</span>
-            <button id="moodle-dl-deselect-all" class="moodle-dl-btn-link">Bỏ chọn</button>
+          <div class="moodle-dl-filter-group">
+            <span style="font-size: 11px; color: #64748b; margin-right: 2px;">Lọc nhanh:</span>
+            <button class="moodle-dl-filter-btn active" data-filter="all">Tất cả</button>
+            <button class="moodle-dl-filter-btn" data-filter="slides">Chỉ Slide / Bài giảng</button>
+            <button class="moodle-dl-filter-btn" data-filter="exercises">Chỉ Bài tập / Lab</button>
+            <button class="moodle-dl-filter-btn" data-filter="none">Bỏ chọn</button>
           </div>
         </div>
 
+        <!-- Options Bar -->
         <div class="moodle-dl-options">
           <label class="moodle-dl-checkbox-label">
             <input type="checkbox" id="moodle-dl-opt-zip" checked>
-            <span>Nén toàn bộ thành tệp .ZIP (Mặc định)</span>
+            <span>Nén thành tệp .ZIP</span>
           </label>
           <label class="moodle-dl-checkbox-label">
             <input type="checkbox" id="moodle-dl-opt-folders" checked>
-            <span>Tạo thư mục con theo tuần</span>
+            <span>Phân chia thư mục theo chương/tuần</span>
           </label>
           <label class="moodle-dl-checkbox-label">
             <input type="checkbox" id="moodle-dl-opt-index">
@@ -301,21 +324,28 @@
             <input type="checkbox" class="moodle-dl-sec-master-chk" data-section="${encodeURIComponent(section)}" checked>
             <span>${section}</span>
           </label>
-          <span class="moodle-dl-sec-count">${sectionItems.length} tệp</span>
+          <div class="moodle-dl-sec-actions">
+            <span class="moodle-dl-sec-count">${sectionItems.length} tệp</span>
+            <button class="moodle-dl-toggle-btn" title="Thu gọn / Mở rộng" data-section="${encodeURIComponent(section)}">Thu gọn</button>
+          </div>
         `;
         groupEl.appendChild(groupHeader);
 
         const itemsEl = document.createElement("div");
         itemsEl.className = "moodle-dl-section-items";
+        itemsEl.setAttribute("data-section-items", encodeURIComponent(section));
 
         sectionItems.forEach((item) => {
           const itemRow = document.createElement("div");
           itemRow.className = "moodle-dl-item-row";
           itemRow.innerHTML = `
-            <label class="moodle-dl-checkbox-label">
-              <input type="checkbox" class="moodle-dl-item-chk" data-item-id="${item.id}" data-section="${encodeURIComponent(section)}" checked>
-              <span class="moodle-dl-item-name" title="${item.title}">${item.title}</span>
-            </label>
+            <div class="moodle-dl-item-left">
+              <label class="moodle-dl-checkbox-label">
+                <input type="checkbox" class="moodle-dl-item-chk" data-item-id="${item.id}" data-title="${encodeURIComponent(item.title)}" data-section="${encodeURIComponent(section)}" checked>
+                <span class="moodle-dl-item-name" title="${item.title}">${item.title}</span>
+              </label>
+            </div>
+            <span class="moodle-dl-type-badge">${item.type}</span>
           `;
           itemsEl.appendChild(itemRow);
         });
@@ -328,6 +358,19 @@
     }
 
     function attachEvents() {
+      // Toggle collapse/expand for sections
+      document.querySelectorAll(".moodle-dl-toggle-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const sec = e.target.getAttribute("data-section");
+          const target = document.querySelector(`[data-section-items="${sec}"]`);
+          if (target) {
+            target.classList.toggle("collapsed");
+            e.target.innerText = target.classList.contains("collapsed") ? "Mở rộng" : "Thu gọn";
+          }
+        });
+      });
+
+      // Section master checkbox
       document.querySelectorAll(".moodle-dl-sec-master-chk").forEach((secChk) => {
         secChk.addEventListener("change", (e) => {
           const sec = e.target.getAttribute("data-section");
@@ -338,8 +381,41 @@
         });
       });
 
+      // Individual item checkboxes
       document.querySelectorAll(".moodle-dl-item-chk").forEach((itemChk) => {
         itemChk.addEventListener("change", () => {
+          updateSelectedCount();
+        });
+      });
+
+      // Quick filter buttons
+      document.querySelectorAll(".moodle-dl-filter-btn").forEach((fBtn) => {
+        fBtn.addEventListener("click", (e) => {
+          document.querySelectorAll(".moodle-dl-filter-btn").forEach((b) => b.classList.remove("active"));
+          e.target.classList.add("active");
+          const filter = e.target.getAttribute("data-filter");
+
+          document.querySelectorAll(".moodle-dl-item-chk").forEach((chk) => {
+            const rawTitle = decodeURIComponent(chk.getAttribute("data-title") || "").toLowerCase();
+            if (filter === "all") {
+              chk.checked = true;
+            } else if (filter === "slides") {
+              chk.checked = /slide|bai\s*giang|chap|lec|ly\s*thuyet|overview|tong\s*quan/i.test(rawTitle);
+            } else if (filter === "exercises") {
+              chk.checked = /bai\s*tap|lab|btvn|assign|exercise|de\s*thi|on\s*tap|thuc\s*hanh/i.test(rawTitle);
+            } else if (filter === "none") {
+              chk.checked = false;
+            }
+          });
+
+          // Sync master checkboxes
+          document.querySelectorAll(".moodle-dl-sec-master-chk").forEach((secChk) => {
+            const sec = secChk.getAttribute("data-section");
+            const allSecItems = document.querySelectorAll(`.moodle-dl-item-chk[data-section="${sec}"]`);
+            const checkedSecItems = document.querySelectorAll(`.moodle-dl-item-chk[data-section="${sec}"]:checked`);
+            secChk.checked = allSecItems.length > 0 && allSecItems.length === checkedSecItems.length;
+          });
+
           updateSelectedCount();
         });
       });
@@ -354,7 +430,6 @@
       startBtn.disabled = selected === 0;
     }
 
-    // Render list immediately so modal is never empty
     renderList();
 
     floatBtn.addEventListener("click", () => {
@@ -368,16 +443,6 @@
 
     modal.addEventListener("click", (e) => {
       if (e.target === modal) modal.classList.add("moodle-dl-hidden");
-    });
-
-    document.getElementById("moodle-dl-select-all").addEventListener("click", () => {
-      document.querySelectorAll(".moodle-dl-item-chk, .moodle-dl-sec-master-chk").forEach((c) => (c.checked = true));
-      updateSelectedCount();
-    });
-
-    document.getElementById("moodle-dl-deselect-all").addEventListener("click", () => {
-      document.querySelectorAll(".moodle-dl-item-chk, .moodle-dl-sec-master-chk").forEach((c) => (c.checked = false));
-      updateSelectedCount();
     });
 
     document.getElementById("moodle-dl-btn-start").addEventListener("click", async () => {
