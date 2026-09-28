@@ -1,11 +1,9 @@
 // content.js - Scans Moodle course pages and injects minimal quick download UI with ZIP support
 
 (function () {
-  // Prevent duplicate injection
   if (window.__moodleDownloaderInjected) return;
   window.__moodleDownloaderInjected = true;
 
-  // Sanitize filename & folder name
   function sanitize(name) {
     if (!name) return "unnamed";
     return name
@@ -17,7 +15,6 @@
       .substring(0, 120);
   }
 
-  // Extract clean text without screen reader hints
   function getCleanText(element) {
     if (!element) return "";
     const clone = element.cloneNode(true);
@@ -25,9 +22,12 @@
     return clone.textContent.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
   }
 
-  // Scan current Moodle course page
+  function fixDuplicateExtension(name) {
+    if (!name) return "file";
+    return name.replace(/(\.[a-zA-Z0-9]{2,5})\1+$/i, "$1");
+  }
+
   function scanCourseData() {
-    // 1. Get Course Title
     let courseName = "";
     const titleSelectors = [
       ".page-header-headings h1",
@@ -47,35 +47,26 @@
       courseName = document.title.split("|")[0].split("-")[0].trim() || "Moodle Course";
     }
 
-    // 2. Locate main content area (ignore sidebar/nav-drawer to avoid duplicate links)
-    const mainContent = document.querySelector("#region-main, div[role='main'], .course-content") || document.body;
-
-    // 3. Find all resource links
-    const resourceLinks = mainContent.querySelectorAll(
-      'a[href*="/mod/resource/view.php?id="], a[href*="/mod/folder/view.php?id="], a[href*="/pluginfile.php/"]'
-    );
+    const resourceLinks = Array.from(
+      document.querySelectorAll('a[href*="/mod/resource/view.php"], a[href*="/mod/folder/view.php"], a[href*="/pluginfile.php/"]')
+    ).filter((a) => !a.closest(".courseindex, #nav-drawer, .drawer, nav, aside"));
 
     const items = [];
     const seenUrls = new Set();
 
     resourceLinks.forEach((link, idx) => {
-      // Exclude navigation bars or user drawers
-      if (link.closest(".courseindex, #nav-drawer, .drawer, nav, aside")) return;
-
       const rawUrl = link.href.split("#")[0];
       if (seenUrls.has(rawUrl)) return;
       seenUrls.add(rawUrl);
 
-      // Clean title
       let title = getCleanText(link);
       if (!title || title.length < 2) {
         title = link.getAttribute("aria-label") || getCleanText(link.closest(".activityinstance, .activity-item")) || `Tai_lieu_${idx + 1}`;
       }
 
-      // Remove generic prefixes that Moodle adds
       title = title.replace(/^(File|Tập tin|Tệp|Tài liệu|Folder|Thư mục|PDF document|Document)\s*/i, "");
+      title = fixDuplicateExtension(title);
 
-      // Determine Section / Week
       let sectionName = "Chung (General)";
       const sectionEl = link.closest("[data-sectionid], .course-section, li.section.main, li.section, div.section");
       if (sectionEl) {
@@ -98,7 +89,6 @@
     return { courseName, items };
   }
 
-  // ZIP Downloader Implementation
   async function downloadAsZip({ courseName, items, useFolders, addIndex, onProgress }) {
     if (typeof JSZip === "undefined") {
       alert("Thư viện nén ZIP chưa sẵn sàng. Vui lòng tải trang lại!");
@@ -126,7 +116,6 @@
         const res = await fetch(downloadUrl, { credentials: "include" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        // Resolve filename & extension
         let fileName = item.title;
         const disposition = res.headers.get("content-disposition");
         if (disposition) {
@@ -145,17 +134,10 @@
           } catch (e) {}
         }
 
-        let ext = "";
-        if (fileName.includes(".")) {
-          ext = fileName.substring(fileName.lastIndexOf(".")).toLowerCase();
-        } else {
-          ext = ".pdf";
-        }
-
+        let ext = fileName.includes(".") ? fileName.substring(fileName.lastIndexOf(".")).toLowerCase() : ".pdf";
         let baseName = sanitize(item.title);
-        if (!baseName.toLowerCase().endsWith(ext)) {
-          baseName += ext;
-        }
+        if (!baseName.toLowerCase().endsWith(ext)) baseName += ext;
+        baseName = fixDuplicateExtension(baseName);
 
         if (addIndex) {
           baseName = `${String(i + 1).padStart(2, "0")}_${baseName}`;
@@ -173,10 +155,9 @@
         console.warn("Failed to fetch item for zip:", item.title, err);
       }
 
-      await new Promise((r) => setTimeout(r, 150));
+      await new Promise((r) => setTimeout(r, 120));
     }
 
-    // Generate zip file
     onProgress({
       current: items.length,
       total: items.length,
@@ -201,7 +182,6 @@
       }
     );
 
-    // Trigger download
     const blobUrl = URL.createObjectURL(zipBlob);
     const a = document.createElement("a");
     a.href = blobUrl;
@@ -220,12 +200,10 @@
     });
   }
 
-  // Inject floating button and modal
   function injectUI() {
     const data = scanCourseData();
     if (data.items.length === 0) return;
 
-    // Floating Button (minimal slate style)
     const floatBtn = document.createElement("button");
     floatBtn.id = "moodle-dl-float-btn";
     floatBtn.innerHTML = `
@@ -238,7 +216,6 @@
     `;
     document.body.appendChild(floatBtn);
 
-    // Modal Overlay
     const modal = document.createElement("div");
     modal.id = "moodle-dl-modal";
     modal.className = "moodle-dl-hidden";
@@ -247,14 +224,14 @@
         <div class="moodle-dl-header">
           <div class="moodle-dl-header-title">
             <span class="moodle-dl-badge">Moodle Downloader</span>
-            <h3 id="moodle-dl-course-title"></h3>
+            <h3 id="moodle-dl-course-title">${data.courseName}</h3>
           </div>
           <button id="moodle-dl-close" class="moodle-dl-btn-close">&times;</button>
         </div>
 
         <div class="moodle-dl-toolbar">
           <div class="moodle-dl-stats">
-            <span id="moodle-dl-count-badge"></span>
+            <span id="moodle-dl-count-badge">Tìm thấy ${data.items.length} tệp</span>
           </div>
           <div class="moodle-dl-selection-actions">
             <button id="moodle-dl-select-all" class="moodle-dl-btn-link">Chọn tất cả</button>
@@ -292,14 +269,13 @@
 
         <div class="moodle-dl-footer">
           <button id="moodle-dl-btn-start" class="moodle-dl-btn-primary">
-            Tải các tệp đã chọn
+            Tải các tệp đã chọn (${data.items.length})
           </button>
         </div>
       </div>
     `;
     document.body.appendChild(modal);
 
-    // Populate data
     function renderList() {
       const currentData = scanCourseData();
       document.getElementById("moodle-dl-course-title").innerText = currentData.courseName;
@@ -308,7 +284,6 @@
       const listContainer = document.getElementById("moodle-dl-file-list");
       listContainer.innerHTML = "";
 
-      // Group by section
       const groups = {};
       currentData.items.forEach((item) => {
         if (!groups[item.section]) groups[item.section] = [];
@@ -349,10 +324,10 @@
         listContainer.appendChild(groupEl);
       }
 
-      attachEvents(currentData);
+      attachEvents();
     }
 
-    function attachEvents(currentData) {
+    function attachEvents() {
       document.querySelectorAll(".moodle-dl-sec-master-chk").forEach((secChk) => {
         secChk.addEventListener("change", (e) => {
           const sec = e.target.getAttribute("data-section");
@@ -378,6 +353,9 @@
       startBtn.innerText = `Tải các tệp đã chọn (${selected})`;
       startBtn.disabled = selected === 0;
     }
+
+    // Render list immediately so modal is never empty
+    renderList();
 
     floatBtn.addEventListener("click", () => {
       renderList();
@@ -456,7 +434,6 @@
     });
   }
 
-  // Listen for progress updates from background.js
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "SCAN_RESOURCES") {
       const data = scanCourseData();
@@ -487,7 +464,6 @@
     }
   });
 
-  // Run initial scan & UI injection
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", injectUI);
   } else {

@@ -130,6 +130,77 @@
       margin: 0 auto 32px;
     }
 
+    /* Bookmarklet draggable box */
+    .bookmarklet-box {
+      max-width: 640px;
+      margin: 0 auto 40px;
+      background: #ffffff;
+      border: 1px dashed var(--slate-300);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .bookmarklet-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--slate-900);
+      color: #ffffff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: 1px solid var(--slate-900);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: grab;
+      user-select: none;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+      transition: all 0.15s ease;
+    }
+
+    .bookmarklet-item:hover {
+      background: var(--slate-800);
+      transform: translateY(-2px);
+    }
+
+    .bookmarklet-item:active {
+      cursor: grabbing;
+    }
+
+    .bookmarklet-desc {
+      font-size: 13px;
+      color: var(--slate-500);
+      text-align: center;
+    }
+
+    .bookmarklet-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .copy-link-btn {
+      background: var(--slate-100);
+      border: 1px solid var(--slate-200);
+      color: var(--slate-700);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 6px 14px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .copy-link-btn:hover {
+      background: var(--slate-200);
+      color: var(--slate-900);
+    }
+
     /* CTA Area */
     .cta-area {
       display: flex;
@@ -153,17 +224,6 @@
       transition: all 0.15s ease;
     }
 
-    .btn-dark {
-      background: var(--slate-900);
-      color: #ffffff;
-      border: 1px solid var(--slate-900);
-    }
-
-    .btn-dark:hover {
-      background: var(--slate-800);
-      transform: translateY(-1px);
-    }
-
     .btn-light {
       background: #ffffff;
       color: var(--slate-800);
@@ -174,59 +234,6 @@
       background: var(--slate-100);
       border-color: var(--slate-300);
       transform: translateY(-1px);
-    }
-
-    /* Bookmarklet draggable box */
-    .bookmarklet-box {
-      max-width: 620px;
-      margin: 0 auto 48px;
-      background: #ffffff;
-      border: 1px dashed var(--slate-300);
-      border-radius: 10px;
-      padding: 18px 24px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .bookmarklet-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--slate-100);
-      color: var(--slate-900);
-      padding: 10px 20px;
-      border-radius: 6px;
-      border: 1px solid var(--slate-300);
-      font-size: 14px;
-      font-weight: 700;
-      cursor: grab;
-      user-select: none;
-      text-decoration: none;
-    }
-
-    .bookmarklet-item:hover {
-      background: var(--slate-200);
-    }
-
-    .bookmarklet-item:active {
-      cursor: grabbing;
-    }
-
-    .bookmarklet-desc {
-      font-size: 13px;
-      color: var(--slate-500);
-    }
-
-    .copy-link-btn {
-      background: none;
-      border: none;
-      color: var(--blue-600);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      text-decoration: underline;
     }
 
     /* Demo Preview Card */
@@ -471,22 +478,24 @@
           <span>Moodle Downloader</span>
         </a>
         <div class="bookmarklet-desc">
-          Kéo nút trên vào <strong>thanh Dấu trang (Bookmarks Bar)</strong> của trình duyệt (phím tắt <code>Ctrl + Shift + B</code>).
+          Kéo nút màu đen ở trên thả vào <strong>thanh Dấu trang (Bookmarks Bar)</strong> của trình duyệt (phím tắt <code>Ctrl + Shift + B</code>).
         </div>
-        <button id="copy-bm-btn" class="copy-link-btn">Sao chép mã Bookmarklet vào bộ nhớ tạm</button>
+        <div class="bookmarklet-actions">
+          <button id="copy-bm-btn" class="copy-link-btn">Sao chép mã Bookmarklet (Trực tiếp)</button>
+        </div>
       </div>
 
       <div class="cta-area">
-        <a href="moodle-downloader-extension.zip" class="btn btn-dark" download>
+        <a href="moodle-downloader-extension.zip" class="btn btn-light" download>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
-          <span>Tải Chrome Extension (.ZIP)</span>
+          <span>Tải bản Chrome Extension (.ZIP)</span>
         </a>
         <a href="#instructions" class="btn btn-light">
-          <span>Xem hướng dẫn cài đặt</span>
+          <span>Xem hướng dẫn chi tiết</span>
         </a>
       </div>
     </div>
@@ -500,7 +509,7 @@
           <div class="window-dot"></div>
           <div class="window-dot"></div>
           <div class="window-dot"></div>
-          <span class="window-title">courses.ctda.hcmus.edu.vn — Giao diện Moodle khóa học</span>
+          <span class="window-title">courses.ctda.hcmus.edu.vn — Giao diện quét và tải tài liệu</span>
         </div>
         <div class="window-body">
           <img src="screenshot.png" alt="Giao diện khóa học Moodle HCMUS">
@@ -563,7 +572,7 @@
     </div>
   </section>
 
-  <!-- Features Grid -->
+  <!-- Features Section -->
   <section class="features-section">
     <div class="container">
       <div class="feat-grid">
@@ -598,7 +607,7 @@
     document.getElementById("copy-bm-btn").addEventListener("click", function() {
       const code = document.getElementById("bm-link").getAttribute("href");
       navigator.clipboard.writeText(code).then(function() {
-        alert("Đã sao chép mã Bookmarklet vào bộ nhớ tạm! Bạn có thể tạo dấu trang mới và dán vào ô URL.");
+        alert("Đã sao chép mã Bookmarklet vào bộ nhớ tạm! Bạn có thể tạo dấu trang mới trên trình duyệt và dán vào ô URL.");
       });
     });
   </script>
