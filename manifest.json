@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Moodle Course Resource Downloader",
+  "version": "1.1.0",
+  "description": "Tai toan bo tai lieu khoa hoc tren Moodle (FIT@HCMUS, E-Learning) nhanh chong, ho tro nen file ZIP hoac phan thu muc theo tuan/chuong.",
+  "permissions": [
+    "downloads",
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://*/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Moodle Resource Downloader",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/course/view.php*",
+        "*://*/*/course/view.php*"
+      ],
+      "js": ["jszip.min.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

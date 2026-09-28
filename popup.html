@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moodle Course Downloader</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="popup-header">
+      <div class="header-logo">
+        <img src="icons/icon48.png" alt="Logo" width="28" height="28">
+        <div>
+          <h2>Moodle Downloader</h2>
+          <span class="sub-text">FIT@HCMUS & Moodle LMS</span>
+        </div>
+      </div>
+      <span id="badge-count" class="badge">0 file</span>
+    </header>
+
+    <!-- Not on Moodle State -->
+    <div id="not-moodle-view" class="state-view hidden">
+      <div class="empty-icon">📂</div>
+      <h3>Chưa phát hiện trang Moodle</h3>
+      <p>Hãy điều hướng tới trang môn học trên Moodle (ví dụ: <code>courses.ctda.hcmus.edu.vn/course/view.php?id=...</code>) rồi mở lại tiện ích.</p>
+    </div>
+
+    <!-- Active Course View -->
+    <div id="course-view" class="state-view">
+      <!-- Course Title Card -->
+      <div class="course-card">
+        <span class="card-label">Môn học đang mở:</span>
+        <h4 id="course-name">Đang quét dữ liệu...</h4>
+      </div>
+
+      <!-- Action Toolbar -->
+      <div class="action-bar">
+        <button id="btn-select-all" class="btn-text">Chọn tất cả</button>
+        <span class="divider">|</span>
+        <button id="btn-deselect-all" class="btn-text">Bỏ chọn</button>
+        <button id="btn-rescan" class="btn-text btn-refresh" title="Quét lại">🔄 Quét lại</button>
+      </div>
+
+      <!-- Options -->
+      <div class="options-box">
+        <label class="checkbox-container highlight">
+          <input type="checkbox" id="opt-zip" checked>
+          <span><strong>📦 Nén toàn bộ thành file .ZIP</strong> (Mặc định)</span>
+        </label>
+        <label class="checkbox-container">
+          <input type="checkbox" id="opt-folders" checked>
+          <span>Tạo thư mục con theo tuần/chương</span>
+        </label>
+        <label class="checkbox-container">
+          <input type="checkbox" id="opt-index">
+          <span>Đánh số thứ tự file (01_, 02_...)</span>
+        </label>
+      </div>
+
+      <!-- Files Container -->
+      <div id="file-list" class="file-list-container">
+        <!-- Generated dynamically -->
+      </div>
+
+      <!-- Progress Section -->
+      <div id="progress-container" class="progress-container hidden">
+        <div class="progress-bar-track">
+          <div id="progress-bar-fill" class="progress-bar-fill"></div>
+        </div>
+        <div class="progress-labels">
+          <span id="progress-status">Đang tải...</span>
+          <span id="progress-percent">0%</span>
+        </div>
+      </div>
+
+      <!-- Footer Buttons -->
+      <footer class="popup-footer">
+        <button id="btn-start-download" class="btn-primary" disabled>
+          🚀 Tải các file đã chọn
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  <script src="jszip.min.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
