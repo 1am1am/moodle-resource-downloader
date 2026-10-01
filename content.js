@@ -152,7 +152,7 @@
             <span style="font-weight: 600;">Tạo thư mục theo tên môn học</span>
           </label>
           <label class="moodle-dl-checkbox-label">
-            <input type="checkbox" id="moodle-dl-opt-folders">
+            <input type="checkbox" id="moodle-dl-opt-folders" checked>
             <span>Chia thêm thư mục con theo chương/tuần</span>
           </label>
           <label class="moodle-dl-checkbox-label">
