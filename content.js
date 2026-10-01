@@ -80,7 +80,7 @@
 
       title = title.replace(/^(File|Tập tin|Tệp|Tài liệu|Folder|Thư mục|PDF document|Document)\s*/i, "");
 
-      let sectionName = "Tài liệu chung (General)";
+      let sectionName = "Tài liệu chung";
       const sectionEl = link.closest("[data-sectionid], .course-section, li.section.main, li.section, div.section");
       if (sectionEl) {
         const secTitleEl = sectionEl.querySelector(".sectionname, .section-title, h3, h4, [data-for='section_title']");

@@ -9,8 +9,8 @@ Công cụ hỗ trợ tải toàn bộ tài liệu học tập (PDF, Slide, Bài
 ## Tính năng
 
 - **Tải hàng loạt nhanh chóng:** Tự động gửi lệnh tải cho toàn bộ tài liệu đã chọn mà không cần click thủ công từng file.
+- **Tự động gom thư mục môn học & tuần:** Tự động tạo thư mục môn học và các thư mục con theo chương/tuần (`Tài liệu chung/`, `WEEK 1/`, `WEEK 2/`...), không bị vứt file lẻ ra ngoài `Downloads`.
 - **Bộ lọc nhu cầu học tập:** Lọc nhanh chỉ chọn Slide/Bài giảng để ôn lý thuyết, hoặc chỉ chọn Bài tập/Lab để làm bài.
-- **Tự động phân thư mục (Bản Extension):** Tự động phân chia thư mục tải về theo chương/tuần (`General/`, `WEEK 6/`, `WEEK 7/`...).
 - **Hai phương thức linh hoạt:** Sử dụng trực tiếp qua **Bookmarklet** (không cần cài đặt) hoặc cài đặt làm **Chrome Extension**.
 - **Bảo toàn phiên đăng nhập:** Chạy trực tiếp với cookie session của trình duyệt, không cần đăng nhập lại hay lo lỗi SSO/CAS.
 
@@ -29,8 +29,8 @@ Công cụ hỗ trợ tải toàn bộ tài liệu học tập (PDF, Slide, Bài
      ```
 3. Truy cập vào trang môn học bất kỳ trên Moodle (ví dụ: `courses.ctda.hcmus.edu.vn/course/view.php?id=...`).
 4. Nhấn vào dấu trang **Moodle Downloader** vừa tạo.
-5. Chọn các tệp bạn muốn và bấm **Tải tài liệu đã chọn**.
-   *(Lưu ý: Nếu trình duyệt hỏi "Cho phép tải nhiều tệp?", bạn hãy chọn **Cho phép / Allow** nhé).*
+5. Chọn các tệp bạn muốn và bấm **Tải tài liệu vào thư mục**.
+6. Hộp thoại Windows/trình duyệt sẽ hỏi bạn muốn lưu vào thư mục nào (ví dụ chọn thư mục `Downloads`), công cụ sẽ tự động tạo thư mục `[Tên môn]/[Tuần hoặc Chương]/` và lưu toàn bộ file vào đúng các thư mục con!
 
 ---
 
