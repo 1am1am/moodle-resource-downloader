@@ -331,13 +331,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       </div>
 
       <div class="moodle-dl-options">
-        <label class="moodle-dl-label" title="Gom toàn bộ vào 1 file ZIP có sẵn cấu trúc thư mục môn học và từng tuần">
-          <input type="radio" name="bm-mode" id="bm-mode-zip" checked style="width:14px; height:14px; accent-color:#0f172a; cursor:pointer;">
-          <strong style="color:#0f172a;">Gom theo thư mục môn & tuần (.ZIP - Dễ quản lý)</strong>
+        <label class="moodle-dl-label">
+          <input type="checkbox" id="bm-opt-course" checked disabled style="width:14px; height:14px; accent-color:#0f172a; cursor:pointer;">
+          <strong style="color:#0f172a;">Tạo thư mục theo tên môn học</strong>
         </label>
-        <label class="moodle-dl-label" title="Tải từng file rời rạc trực tiếp về thư mục Downloads">
-          <input type="radio" name="bm-mode" id="bm-mode-direct" style="width:14px; height:14px; accent-color:#0f172a; cursor:pointer;">
-          <span>Tải file lẻ trực tiếp</span>
+        <label class="moodle-dl-label">
+          <input type="checkbox" id="bm-opt-subfolders" style="width:14px; height:14px; accent-color:#0f172a; cursor:pointer;">
+          <span>Chia thêm thư mục con theo chương/tuần</span>
         </label>
         <label class="moodle-dl-label" style="margin-left:auto;">
           <input type="checkbox" id="bm-opt-index" style="width:14px; height:14px; accent-color:#0f172a; cursor:pointer;">
@@ -346,7 +346,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       </div>
 
       <div class="moodle-dl-info-box">
-        <span>Khuyên dùng chế độ <strong>Gom theo thư mục môn & tuần (.ZIP)</strong> để tự động chia sẵn các folder tuần trên máy tính.</span>
+        <span>Tài liệu sẽ được tự động gom vào thư mục môn học <strong>${sanitize(courseName)}</strong>.</span>
       </div>
 
       <div class="moodle-dl-list" id="bm-list"></div>
@@ -492,7 +492,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const selected = items.filter((i) => checkedIds.has(i.id));
     if (selected.length === 0) return;
 
-    const isZip = document.getElementById("bm-mode-zip") ? document.getElementById("bm-mode-zip").checked : true;
+    const useSubfolders = document.getElementById("bm-opt-subfolders") ? document.getElementById("bm-opt-subfolders").checked : false;
     const addIndex = document.getElementById("bm-opt-index") ? document.getElementById("bm-opt-index").checked : false;
 
     const pbox = document.getElementById("bm-pbox");
@@ -505,71 +505,73 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
     const seenNamesBySection = {};
 
-    if (isZip) {
-      // MODE 1: ZIP with Course and Week folders
-      pstatus.innerText = "Đang bắt đầu gom tài liệu...";
+    pstatus.innerText = "Đang bắt đầu gom tài liệu...";
 
-      if (window.JSZip) {
-        const zip = new JSZip();
-        const root = zip.folder(sanitize(courseName));
+    if (window.JSZip) {
+      const zip = new JSZip();
+      const root = zip.folder(sanitize(courseName));
 
-        for (let i = 0; i < selected.length; i++) {
-          const it = selected[i];
-          const pct = Math.round(((i + 1) / selected.length) * 85);
-          pfill.style.width = `${pct}%`;
-          ppct.innerText = `${pct}%`;
-          pstatus.innerText = `Đang lấy (${i + 1}/${selected.length}): ${it.title}`;
+      for (let i = 0; i < selected.length; i++) {
+        const it = selected[i];
+        const pct = Math.round(((i + 1) / selected.length) * 85);
+        pfill.style.width = `${pct}%`;
+        ppct.innerText = `${pct}%`;
+        pstatus.innerText = `Đang lấy (${i + 1}/${selected.length}): ${it.title}`;
 
-          try {
-            const { finalUrl, res } = await resolveDirectFile(it.url, it.title);
-            let cleanName = extractFileName(res, it.title);
+        try {
+          const { finalUrl, res } = await resolveDirectFile(it.url, it.title);
+          let cleanName = extractFileName(res, it.title);
 
-            const secKey = it.section || "Tài liệu chung";
-            if (!seenNamesBySection[secKey]) seenNamesBySection[secKey] = new Set();
-            cleanName = getUniqueFileName(seenNamesBySection[secKey], cleanName);
+          const secKey = it.section || "Tài liệu chung";
+          const seenKey = useSubfolders ? secKey : "ALL";
+          if (!seenNamesBySection[seenKey]) seenNamesBySection[seenKey] = new Set();
+          cleanName = getUniqueFileName(seenNamesBySection[seenKey], cleanName);
 
-            if (addIndex) {
-              cleanName = `${String(i + 1).padStart(2, "0")}_${cleanName}`;
-            }
+          if (addIndex) {
+            cleanName = `${String(i + 1).padStart(2, "0")}_${cleanName}`;
+          }
 
-            if (res && res.ok) {
-              const blob = await res.blob();
+          if (res && res.ok) {
+            const blob = await res.blob();
+            if (useSubfolders) {
               const secFolder = root.folder(sanitize(secKey));
               secFolder.file(cleanName, blob);
+            } else {
+              root.file(cleanName, blob);
             }
-          } catch (err) {
-            console.warn("Error fetching item for zip:", it, err);
           }
-          await new Promise((r) => setTimeout(r, 120));
+        } catch (err) {
+          console.warn("Error fetching item for zip:", it, err);
         }
-
-        pstatus.innerText = "Đang hoàn tất đóng gói cây thư mục...";
-        ppct.innerText = "90%";
-        pfill.style.width = "90%";
-
-        const zipBlob = await zip.generateAsync({ type: "blob", compression: "STORE" }, (meta) => {
-          const progress = 90 + Math.round(meta.percent * 0.1);
-          pfill.style.width = `${progress}%`;
-          ppct.innerText = `${progress}%`;
-        });
-
-        const blobUrl = URL.createObjectURL(zipBlob);
-        const a = document.createElement("a");
-        a.href = blobUrl;
-        a.download = `${sanitize(courseName)}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-          a.remove();
-          URL.revokeObjectURL(blobUrl);
-        }, 20000);
-
-        pstatus.innerText = `Hoàn tất! Đã gom ${selected.length} tệp vào các folder tuần/chương.`;
-        ppct.innerText = "100%";
-        pfill.style.width = "100%";
-        document.getElementById("bm-start").disabled = false;
-        return;
+        await new Promise((r) => setTimeout(r, 120));
       }
+
+      pstatus.innerText = "Đang hoàn tất đóng gói thư mục...";
+      ppct.innerText = "90%";
+      pfill.style.width = "90%";
+
+      const zipBlob = await zip.generateAsync({ type: "blob", compression: "STORE" }, (meta) => {
+        const progress = 90 + Math.round(meta.percent * 0.1);
+        pfill.style.width = `${progress}%`;
+        ppct.innerText = `${progress}%`;
+      });
+
+      const blobUrl = URL.createObjectURL(zipBlob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `${sanitize(courseName)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        a.remove();
+        URL.revokeObjectURL(blobUrl);
+      }, 20000);
+
+      pstatus.innerText = `Hoàn tất! Đã gom ${selected.length} tệp vào thư mục ${sanitize(courseName)}.`;
+      ppct.innerText = "100%";
+      pfill.style.width = "100%";
+      document.getElementById("bm-start").disabled = false;
+      return;
     }
 
     // MODE 2: Direct sequential file download (or fallback if JSZip fails)
