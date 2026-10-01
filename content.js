@@ -1,4 +1,4 @@
-// content.js - Scans Moodle course pages with business logic options & quick filters
+// content.js - Scans Moodle course pages with business logic options & quick filters (Direct downloads)
 
 (function () {
   if (window.__moodleDownloaderInjected) return;
@@ -41,11 +41,6 @@
     return "TỆP";
   }
 
-  function fixDuplicateExtension(name) {
-    if (!name) return "file";
-    return name.replace(/(\.[a-zA-Z0-9]{2,5})\1+$/i, "$1");
-  }
-
   function scanCourseData() {
     let courseName = "";
     const titleSelectors = [
@@ -84,7 +79,6 @@
       }
 
       title = title.replace(/^(File|Tập tin|Tệp|Tài liệu|Folder|Thư mục|PDF document|Document)\s*/i, "");
-      title = fixDuplicateExtension(title);
 
       let sectionName = "Tài liệu chung (General)";
       const sectionEl = link.closest("[data-sectionid], .course-section, li.section.main, li.section, div.section");
@@ -106,117 +100,6 @@
     });
 
     return { courseName, items };
-  }
-
-  async function downloadAsZip({ courseName, items, useFolders, addIndex, onProgress }) {
-    if (typeof JSZip === "undefined") {
-      alert("Thư viện nén ZIP chưa sẵn sàng. Vui lòng tải trang lại!");
-      return;
-    }
-
-    const zip = new JSZip();
-    const cleanCourse = sanitize(courseName || "Moodle_Course");
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      onProgress({
-        current: i + 1,
-        total: items.length,
-        currentFile: item.title,
-        status: `Đang tải (${i + 1}/${items.length}): ${item.title}`
-      });
-
-      try {
-        let downloadUrl = item.url;
-        if (downloadUrl.includes("/mod/resource/view.php") && !downloadUrl.includes("redirect=1")) {
-          downloadUrl += (downloadUrl.includes("?") ? "&" : "?") + "redirect=1";
-        }
-
-        const res = await fetch(downloadUrl, { credentials: "include" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        let fileName = item.title;
-        const disposition = res.headers.get("content-disposition");
-        if (disposition) {
-          const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
-          if (utfMatch && utfMatch[1]) {
-            fileName = decodeURIComponent(utfMatch[1]);
-          } else {
-            const match = disposition.match(/filename=["']?([^"';]+)["']?/i);
-            if (match && match[1]) fileName = match[1].trim();
-          }
-        } else if (res.url) {
-          try {
-            const parsed = new URL(res.url);
-            const lastPart = parsed.pathname.split("/").filter(Boolean).pop();
-            if (lastPart && lastPart.includes(".")) fileName = decodeURIComponent(lastPart);
-          } catch (e) {}
-        }
-
-        let ext = fileName.includes(".") ? fileName.substring(fileName.lastIndexOf(".")).toLowerCase() : ".pdf";
-        let baseName = sanitize(item.title);
-        if (!baseName.toLowerCase().endsWith(ext)) baseName += ext;
-        baseName = fixDuplicateExtension(baseName);
-
-        if (addIndex) {
-          baseName = `${String(i + 1).padStart(2, "0")}_${baseName}`;
-        }
-
-        const arrayBuffer = await res.arrayBuffer();
-        const cleanSection = sanitize(item.section || "Chung");
-
-        if (useFolders) {
-          zip.folder(cleanSection).file(baseName, arrayBuffer);
-        } else {
-          zip.file(baseName, arrayBuffer);
-        }
-      } catch (err) {
-        console.warn("Failed to fetch item for zip:", item.title, err);
-      }
-
-      await new Promise((r) => setTimeout(r, 120));
-    }
-
-    onProgress({
-      current: items.length,
-      total: items.length,
-      currentFile: "Đang đóng gói...",
-      status: "Đang nén tệp .ZIP..."
-    });
-
-    const zipBlob = await zip.generateAsync(
-      {
-        type: "blob",
-        compression: "DEFLATE",
-        compressionOptions: { level: 6 }
-      },
-      (metadata) => {
-        const pct = Math.round(metadata.percent);
-        onProgress({
-          current: items.length,
-          total: items.length,
-          currentFile: `Nén ${pct}%`,
-          status: `Đang nén tệp .ZIP: ${pct}%`
-        });
-      }
-    );
-
-    const blobUrl = URL.createObjectURL(zipBlob);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = `${cleanCourse}.zip`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
-
-    onProgress({
-      current: items.length,
-      total: items.length,
-      currentFile: `${cleanCourse}.zip`,
-      status: `Đã hoàn tất tải tệp nén: ${cleanCourse}.zip`,
-      isDone: true
-    });
   }
 
   function injectUI() {
@@ -264,10 +147,6 @@
 
         <!-- Options Bar -->
         <div class="moodle-dl-options">
-          <label class="moodle-dl-checkbox-label">
-            <input type="checkbox" id="moodle-dl-opt-zip" checked>
-            <span>Nén thành tệp .ZIP</span>
-          </label>
           <label class="moodle-dl-checkbox-label">
             <input type="checkbox" id="moodle-dl-opt-folders" checked>
             <span>Phân chia thư mục theo chương/tuần</span>
@@ -358,7 +237,6 @@
     }
 
     function attachEvents() {
-      // Toggle collapse/expand for sections
       document.querySelectorAll(".moodle-dl-toggle-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const sec = e.target.getAttribute("data-section");
@@ -370,7 +248,6 @@
         });
       });
 
-      // Section master checkbox
       document.querySelectorAll(".moodle-dl-sec-master-chk").forEach((secChk) => {
         secChk.addEventListener("change", (e) => {
           const sec = e.target.getAttribute("data-section");
@@ -381,14 +258,12 @@
         });
       });
 
-      // Individual item checkboxes
       document.querySelectorAll(".moodle-dl-item-chk").forEach((itemChk) => {
         itemChk.addEventListener("change", () => {
           updateSelectedCount();
         });
       });
 
-      // Quick filter buttons
       document.querySelectorAll(".moodle-dl-filter-btn").forEach((fBtn) => {
         fBtn.addEventListener("click", (e) => {
           document.querySelectorAll(".moodle-dl-filter-btn").forEach((b) => b.classList.remove("active"));
@@ -408,7 +283,6 @@
             }
           });
 
-          // Sync master checkboxes
           document.querySelectorAll(".moodle-dl-sec-master-chk").forEach((secChk) => {
             const sec = secChk.getAttribute("data-section");
             const allSecItems = document.querySelectorAll(`.moodle-dl-item-chk[data-section="${sec}"]`);
@@ -445,7 +319,7 @@
       if (e.target === modal) modal.classList.add("moodle-dl-hidden");
     });
 
-    document.getElementById("moodle-dl-btn-start").addEventListener("click", async () => {
+    document.getElementById("moodle-dl-btn-start").addEventListener("click", () => {
       const currentData = scanCourseData();
       const checkedIds = new Set(
         Array.from(document.querySelectorAll(".moodle-dl-item-chk:checked")).map((c) => c.getAttribute("data-item-id"))
@@ -457,7 +331,6 @@
         return;
       }
 
-      const isZip = document.getElementById("moodle-dl-opt-zip").checked;
       const useFolders = document.getElementById("moodle-dl-opt-folders").checked;
       const addIndex = document.getElementById("moodle-dl-opt-index").checked;
 
@@ -469,33 +342,15 @@
       progressBox.classList.remove("moodle-dl-hidden");
       document.getElementById("moodle-dl-btn-start").disabled = true;
 
-      if (isZip) {
-        await downloadAsZip({
+      chrome.runtime.sendMessage({
+        action: "START_DOWNLOAD",
+        data: {
           courseName: currentData.courseName,
           items: selectedItems,
           useFolders,
-          addIndex,
-          onProgress: (p) => {
-            const pct = Math.round((p.current / p.total) * 100) || 0;
-            fill.style.width = `${pct}%`;
-            percentText.innerText = `${pct}%`;
-            statusText.innerText = p.status || p.currentFile;
-            if (p.isDone) {
-              document.getElementById("moodle-dl-btn-start").disabled = false;
-            }
-          }
-        });
-      } else {
-        chrome.runtime.sendMessage({
-          action: "START_DOWNLOAD",
-          data: {
-            courseName: currentData.courseName,
-            items: selectedItems,
-            useFolders,
-            addIndex
-          }
-        });
-      }
+          addIndex
+        }
+      });
     });
   }
 

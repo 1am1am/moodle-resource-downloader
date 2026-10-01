@@ -1,18 +1,7 @@
-// bookmarklet.js - Moodle Course Downloader Bookmarklet (Interactive & Feature-rich)
+// bookmarklet.js - Moodle Course Resource Downloader (Direct native download, zero dependencies)
 (function () {
   const oldModal = document.getElementById("moodle-dl-modal");
   if (oldModal) oldModal.remove();
-
-  function sanitize(name) {
-    if (!name) return "unnamed";
-    return name
-      .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_")
-      .replace(/[\t\n\r]/g, " ")
-      .replace(/\s+/g, " ")
-      .replace(/^\.+|\.+$/g, "")
-      .trim()
-      .substring(0, 120);
-  }
 
   function getCleanText(el) {
     if (!el) return "";
@@ -40,23 +29,7 @@
     return "TỆP";
   }
 
-  function fixDuplicateExtension(name) {
-    if (!name) return "file";
-    return name.replace(/(\.[a-zA-Z0-9]{2,5})\1+$/i, "$1");
-  }
-
-  function loadJSZip(cb) {
-    if (window.JSZip) return cb(window.JSZip);
-    const s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
-    s.onload = () => cb(window.JSZip);
-    s.onerror = () => {
-      console.warn("Could not load JSZip from CDN.");
-      cb(null);
-    };
-    document.head.appendChild(s);
-  }
-
+  // Scan Course Title
   let courseName = "";
   const titleSelectors = [
     ".page-header-headings h1",
@@ -74,6 +47,7 @@
   }
   if (!courseName) courseName = document.title.split("|")[0].split("-")[0].trim() || "Moodle Course";
 
+  // Scan Resource Links
   const resourceLinks = Array.from(
     document.querySelectorAll('a[href*="/mod/resource/view.php"], a[href*="/mod/folder/view.php"], a[href*="/pluginfile.php/"]')
   ).filter((a) => !a.closest(".courseindex, #nav-drawer, .drawer, nav, aside"));
@@ -91,7 +65,6 @@
       title = link.getAttribute("aria-label") || getCleanText(link.closest(".activityinstance, .activity-item")) || `Tai_lieu_${idx + 1}`;
     }
     title = title.replace(/^(File|Tập tin|Tệp|Tài liệu|Folder|Thư mục|PDF document|Document)\s*/i, "");
-    title = fixDuplicateExtension(title);
 
     let sectionName = "Tài liệu chung (General)";
     const secEl = link.closest("[data-sectionid], .course-section, li.section.main, li.section, div.section");
@@ -117,8 +90,7 @@
     return;
   }
 
-  loadJSZip(() => {});
-
+  // Inject Styles
   if (!document.getElementById("moodle-dl-styles")) {
     const style = document.createElement("style");
     style.id = "moodle-dl-styles";
@@ -162,12 +134,9 @@
       }
       .moodle-dl-filter-btn:hover { background: #e2e8f0; color: #0f172a; }
       .moodle-dl-filter-btn.active { background: #0f172a; color: #ffffff; border-color: #0f172a; }
-      .moodle-dl-options {
-        padding: 10px 22px; background: #f8fafc; display: flex; gap: 16px;
-        border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #334155; flex-wrap: wrap;
+      .moodle-dl-notice {
+        padding: 8px 22px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #64748b;
       }
-      .moodle-dl-label { display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; }
-      .moodle-dl-label input[type="checkbox"] { width: 14px; height: 14px; accent-color: #0f172a; cursor: pointer; margin: 0; }
       .moodle-dl-list { padding: 12px 22px; overflow-y: auto; flex: 1; max-height: 380px; }
       .moodle-dl-group { margin-bottom: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff; }
       .moodle-dl-gh {
@@ -208,6 +177,7 @@
     document.head.appendChild(style);
   }
 
+  // Create Modal
   const modal = document.createElement("div");
   modal.id = "moodle-dl-modal";
   modal.innerHTML = `
@@ -232,27 +202,17 @@
         </div>
       </div>
 
-      <!-- Options Bar -->
-      <div class="moodle-dl-options">
-        <label class="moodle-dl-label">
-          <input type="checkbox" id="bm-opt-zip" checked>
-          <span>Nén thành tệp .ZIP</span>
-        </label>
-        <label class="moodle-dl-label">
-          <input type="checkbox" id="bm-opt-folders" checked>
-          <span>Phân chia thư mục theo chương/tuần</span>
-        </label>
-        <label class="moodle-dl-label">
-          <input type="checkbox" id="bm-opt-index">
-          <span>Đánh số thứ tự (01_, 02_...)</span>
-        </label>
+      <div class="moodle-dl-notice">
+        Tip: Nếu trình duyệt hỏi <em>"Tải nhiều tệp xuống?"</em>, bạn hãy chọn <strong>Cho phép (Allow)</strong> nhé.
       </div>
 
       <div class="moodle-dl-list" id="bm-list"></div>
+      
       <div class="moodle-dl-progress moodle-dl-hidden" id="bm-pbox" style="display:none;">
         <div class="moodle-dl-bar-bg"><div class="moodle-dl-bar-fill" id="bm-pfill"></div></div>
         <div class="moodle-dl-bar-text"><span id="bm-pstatus">Đang chuẩn bị...</span><span id="bm-ppct">0%</span></div>
       </div>
+
       <div class="moodle-dl-footer">
         <button class="moodle-dl-btn" id="bm-start">Tải tài liệu đã chọn (${items.length})</button>
       </div>
@@ -260,6 +220,7 @@
   `;
   document.body.appendChild(modal);
 
+  // Group by section
   const listEl = document.getElementById("bm-list");
   const groups = {};
   items.forEach((it) => {
@@ -274,8 +235,8 @@
     const gh = document.createElement("div");
     gh.className = "moodle-dl-gh";
     gh.innerHTML = `
-      <label class="moodle-dl-label" style="font-weight:600;">
-        <input type="checkbox" class="bm-sec-chk" data-sec="${encodeURIComponent(sec)}" checked>
+      <label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
+        <input type="checkbox" class="bm-sec-chk" data-sec="${encodeURIComponent(sec)}" checked style="width:14px; height:14px; accent-color:#0f172a; cursor:pointer;">
         <span>${sec}</span>
       </label>
       <div style="display:flex; align-items:center; gap:8px;">
@@ -294,8 +255,8 @@
       row.className = "moodle-dl-item";
       row.innerHTML = `
         <div class="moodle-dl-item-left">
-          <label class="moodle-dl-label">
-            <input type="checkbox" class="bm-chk" data-id="${it.id}" data-title="${encodeURIComponent(it.title)}" data-sec="${encodeURIComponent(sec)}" checked>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
+            <input type="checkbox" class="bm-chk" data-id="${it.id}" data-title="${encodeURIComponent(it.title)}" data-sec="${encodeURIComponent(sec)}" checked style="width:14px; height:14px; accent-color:#0f172a; cursor:pointer;">
             <span class="moodle-dl-item-text" title="${it.title}">${it.title}</span>
           </label>
         </div>
@@ -315,7 +276,7 @@
     b.disabled = cnt === 0;
   }
 
-  // Toggle collapse/expand for sections
+  // Toggle Collapse
   document.querySelectorAll(".moodle-dl-toggle-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       const s = e.target.getAttribute("data-sec-btn");
@@ -327,7 +288,7 @@
     });
   });
 
-  // Section master checkboxes
+  // Master Section Checkbox
   document.querySelectorAll(".bm-sec-chk").forEach((secChk) => {
     secChk.addEventListener("change", (e) => {
       const s = e.target.getAttribute("data-sec");
@@ -338,7 +299,7 @@
 
   document.querySelectorAll(".bm-chk").forEach((c) => c.addEventListener("change", updateBtn));
 
-  // Quick filter buttons
+  // Quick Filters
   document.querySelectorAll(".moodle-dl-filter-btn").forEach((fBtn) => {
     fBtn.addEventListener("click", (e) => {
       document.querySelectorAll(".moodle-dl-filter-btn").forEach((b) => b.classList.remove("active"));
@@ -358,7 +319,6 @@
         }
       });
 
-      // Sync section master checkboxes
       document.querySelectorAll(".bm-sec-chk").forEach((secChk) => {
         const s = secChk.getAttribute("data-sec");
         const all = document.querySelectorAll(`.bm-chk[data-sec="${s}"]`);
@@ -377,14 +337,11 @@
     if (e.target === modal) modal.remove();
   };
 
+  // Direct sequential download execution
   document.getElementById("bm-start").onclick = async () => {
     const checkedIds = new Set(Array.from(document.querySelectorAll(".bm-chk:checked")).map((c) => c.getAttribute("data-id")));
     const selected = items.filter((i) => checkedIds.has(i.id));
     if (selected.length === 0) return;
-
-    const isZip = document.getElementById("bm-opt-zip").checked;
-    const useFolders = document.getElementById("bm-opt-folders").checked;
-    const addIndex = document.getElementById("bm-opt-index").checked;
 
     const pbox = document.getElementById("bm-pbox");
     const pfill = document.getElementById("bm-pfill");
@@ -394,115 +351,33 @@
     pbox.style.display = "block";
     document.getElementById("bm-start").disabled = true;
 
-    if (isZip) {
-      loadJSZip(async (zipLib) => {
-        if (!zipLib) {
-          alert("Không thể tải thư viện nén ZIP. Đang chuyển sang tải từng tệp...");
-          downloadIndividually();
-          return;
-        }
+    for (let i = 0; i < selected.length; i++) {
+      const it = selected[i];
+      const pct = Math.round(((i + 1) / selected.length) * 100);
+      pfill.style.width = `${pct}%`;
+      ppct.innerText = `${pct}%`;
+      pstatus.innerText = `Đang tải (${i + 1}/${selected.length}): ${it.title}`;
 
-        const zip = new zipLib();
-        const cleanCourse = sanitize(courseName);
-
-        for (let i = 0; i < selected.length; i++) {
-          const it = selected[i];
-          const pct = Math.round(((i + 1) / selected.length) * 100);
-          pfill.style.width = `${pct}%`;
-          ppct.innerText = `${pct}%`;
-          pstatus.innerText = `Đang tải (${i + 1}/${selected.length}): ${it.title}`;
-
-          try {
-            let u = it.url;
-            if (u.includes("/mod/resource/view.php") && !u.includes("redirect=1")) {
-              u += (u.includes("?") ? "&" : "?") + "redirect=1";
-            }
-            const res = await fetch(u, { credentials: "include" });
-            const buf = await res.arrayBuffer();
-
-            let fname = it.title;
-            const disposition = res.headers.get("content-disposition");
-            if (disposition) {
-              const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
-              if (utfMatch && utfMatch[1]) fname = decodeURIComponent(utfMatch[1]);
-              else {
-                const std = disposition.match(/filename=["']?([^"';]+)["']?/i);
-                if (std && std[1]) fname = std[1].trim();
-              }
-            } else if (res.url) {
-              try {
-                const parsed = new URL(res.url);
-                const last = parsed.pathname.split("/").filter(Boolean).pop();
-                if (last && last.includes(".")) fname = decodeURIComponent(last);
-              } catch (e) {}
-            }
-
-            let ext = fname.includes(".") ? fname.substring(fname.lastIndexOf(".")).toLowerCase() : ".pdf";
-            let baseName = sanitize(it.title);
-            if (!baseName.toLowerCase().endsWith(ext)) baseName += ext;
-            baseName = fixDuplicateExtension(baseName);
-
-            if (addIndex) {
-              baseName = `${String(i + 1).padStart(2, "0")}_${baseName}`;
-            }
-
-            if (useFolders) {
-              zip.folder(sanitize(it.section)).file(baseName, buf);
-            } else {
-              zip.file(baseName, buf);
-            }
-          } catch (e) {
-            console.warn(e);
-          }
-          await new Promise((r) => setTimeout(r, 120));
-        }
-
-        pstatus.innerText = "Đang nén tệp .ZIP...";
-        const zipBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" }, (meta) => {
-          const p = Math.round(meta.percent);
-          pfill.style.width = `${p}%`;
-          ppct.innerText = `${p}%`;
-          pstatus.innerText = `Đang nén tệp .ZIP: ${p}%`;
-        });
-
-        const blobUrl = URL.createObjectURL(zipBlob);
-        const a = document.createElement("a");
-        a.href = blobUrl;
-        a.download = `${cleanCourse}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
-
-        pstatus.innerText = `Đã hoàn tất tải xuống: ${cleanCourse}.zip`;
-        document.getElementById("bm-start").disabled = false;
-      });
-    } else {
-      downloadIndividually();
-    }
-
-    async function downloadIndividually() {
-      for (let i = 0; i < selected.length; i++) {
-        const it = selected[i];
-        const pct = Math.round(((i + 1) / selected.length) * 100);
-        pfill.style.width = `${pct}%`;
-        ppct.innerText = `${pct}%`;
-        pstatus.innerText = `Đang tải (${i + 1}/${selected.length}): ${it.title}`;
-
-        const a = document.createElement("a");
-        let u = it.url;
-        if (u.includes("/mod/resource/view.php") && !u.includes("redirect=1")) {
-          u += (u.includes("?") ? "&" : "?") + "redirect=1";
-        }
-        a.href = u;
-        a.target = "_blank";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        await new Promise((r) => setTimeout(r, 600));
+      let downloadUrl = it.url;
+      if (downloadUrl.includes("/mod/resource/view.php") && !downloadUrl.includes("redirect=1")) {
+        downloadUrl += (downloadUrl.includes("?") ? "&" : "?") + "redirect=1";
+      } else if (downloadUrl.includes("/pluginfile.php") && !downloadUrl.includes("forcedownload=1")) {
+        downloadUrl += (downloadUrl.includes("?") ? "&" : "?") + "forcedownload=1";
       }
-      pstatus.innerText = "Đã kích hoạt tải tất cả tệp!";
-      document.getElementById("bm-start").disabled = false;
+
+      // Trigger download via hidden iframe
+      const ifr = document.createElement("iframe");
+      ifr.style.display = "none";
+      ifr.src = downloadUrl;
+      document.body.appendChild(ifr);
+
+      // Give browser time between requests so downloads queue up cleanly
+      await new Promise((r) => setTimeout(r, 900));
+
+      setTimeout(() => ifr.remove(), 15000);
     }
+
+    pstatus.innerText = `Đã gửi lệnh tải toàn bộ ${selected.length} tệp!`;
+    document.getElementById("bm-start").disabled = false;
   };
 })();

@@ -1,6 +1,6 @@
 # Moodle Course Resource Downloader
 
-Công cụ hỗ trợ tải toàn bộ tài liệu học tập (PDF, Slide, Bài giảng, Đề thi) của một môn học trên hệ thống Moodle (FIT@HCMUS, CTDA) thành một tệp `.ZIP` duy nhất.
+Công cụ hỗ trợ tải toàn bộ tài liệu học tập (PDF, Slide, Bài giảng, Đề thi) của một môn học trên hệ thống Moodle (FIT@HCMUS, CTDA) trực tiếp về máy tính.
 
 ![Demo Moodle Course](screenshot.png)
 
@@ -8,10 +8,10 @@ Công cụ hỗ trợ tải toàn bộ tài liệu học tập (PDF, Slide, Bài
 
 ## Tính năng
 
-- **Nén toàn bộ thành tệp .ZIP:** Gom tất cả tài liệu vào một tệp nén duy nhất đặt tên theo môn học.
-- **Tự động phân thư mục theo tuần:** Bên trong tệp ZIP phân chia sẵn các thư mục con theo tuần/chương (`General/`, `WEEK 6/`, `WEEK 7/`...).
+- **Tải hàng loạt nhanh chóng:** Tự động gửi lệnh tải cho toàn bộ tài liệu đã chọn mà không cần click thủ công từng file.
+- **Bộ lọc nhu cầu học tập:** Lọc nhanh chỉ chọn Slide/Bài giảng để ôn lý thuyết, hoặc chỉ chọn Bài tập/Lab để làm bài.
+- **Tự động phân thư mục (Bản Extension):** Tự động phân chia thư mục tải về theo chương/tuần (`General/`, `WEEK 6/`, `WEEK 7/`...).
 - **Hai phương thức linh hoạt:** Sử dụng trực tiếp qua **Bookmarklet** (không cần cài đặt) hoặc cài đặt làm **Chrome Extension**.
-- **Tùy chọn tải riêng lẻ:** Bỏ chọn nén ZIP để tải từng tệp vào máy tính nếu muốn.
 - **Bảo toàn phiên đăng nhập:** Chạy trực tiếp với cookie session của trình duyệt, không cần đăng nhập lại hay lo lỗi SSO/CAS.
 
 ---
@@ -28,13 +28,15 @@ Công cụ hỗ trợ tải toàn bộ tài liệu học tập (PDF, Slide, Bài
      javascript:(function(){var s=document.createElement('script');s.src='https://1am1am.github.io/moodle-resource-downloader/bookmarklet.js?t='+Date.now();document.head.appendChild(s);})();
      ```
 3. Truy cập vào trang môn học bất kỳ trên Moodle (ví dụ: `courses.ctda.hcmus.edu.vn/course/view.php?id=...`).
-4. Nhấn vào dấu trang **Moodle Downloader** vừa tạo. Bảng điều khiển sẽ xuất hiện để bạn chọn và tải tệp .ZIP.
+4. Nhấn vào dấu trang **Moodle Downloader** vừa tạo.
+5. Chọn các tệp bạn muốn và bấm **Tải tài liệu đã chọn**.
+   *(Lưu ý: Nếu trình duyệt hỏi "Cho phép tải nhiều tệp?", bạn hãy chọn **Cho phép / Allow** nhé).*
 
 ---
 
 ## Phương thức 2: Cài đặt Chrome Extension
 
-Dành cho người dùng muốn có nút bấm tự động xuất hiện ở góc trang web:
+Dành cho người dùng muốn có nút bấm tự động xuất hiện ở góc trang web và tự tạo thư mục con trên máy tính:
 
 1. Tải tệp `moodle-downloader-extension.zip` từ trang phát hành hoặc repository.
 2. Giải nén tệp zip ra một thư mục trên máy tính.

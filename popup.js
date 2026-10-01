@@ -1,131 +1,6 @@
-// popup.js - Extension popup controller with ZIP support
+// popup.js - Extension popup controller (Direct file downloads)
 
 let courseData = { courseName: "", items: [] };
-
-function sanitize(name) {
-  if (!name) return "unnamed";
-  return name
-    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_")
-    .replace(/[\t\n\r]/g, " ")
-    .replace(/\s+/g, " ")
-    .replace(/^\.+|\.+$/g, "")
-    .trim()
-    .substring(0, 120);
-}
-
-// Download as ZIP inside popup
-async function downloadAsZip({ courseName, items, useFolders, addIndex, onProgress }) {
-  const zip = new JSZip();
-  const cleanCourse = sanitize(courseName || "Moodle_Course");
-
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    onProgress({
-      current: i + 1,
-      total: items.length,
-      currentFile: item.title,
-      status: `Đang tải (${i + 1}/${items.length}): ${item.title}`
-    });
-
-    try {
-      let downloadUrl = item.url;
-      if (downloadUrl.includes("/mod/resource/view.php") && !downloadUrl.includes("redirect=1")) {
-        downloadUrl += (downloadUrl.includes("?") ? "&" : "?") + "redirect=1";
-      }
-
-      const res = await fetch(downloadUrl, { credentials: "include" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      let fileName = item.title;
-      const disposition = res.headers.get("content-disposition");
-      if (disposition) {
-        const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
-        if (utfMatch && utfMatch[1]) {
-          fileName = decodeURIComponent(utfMatch[1]);
-        } else {
-          const match = disposition.match(/filename=["']?([^"';]+)["']?/i);
-          if (match && match[1]) fileName = match[1].trim();
-        }
-      } else if (res.url) {
-        try {
-          const parsed = new URL(res.url);
-          const lastPart = parsed.pathname.split("/").filter(Boolean).pop();
-          if (lastPart && lastPart.includes(".")) fileName = decodeURIComponent(lastPart);
-        } catch (e) {}
-      }
-
-      let ext = "";
-      if (fileName.includes(".")) {
-        ext = fileName.substring(fileName.lastIndexOf(".")).toLowerCase();
-      } else {
-        ext = ".pdf";
-      }
-
-      let baseName = sanitize(item.title);
-      if (!baseName.toLowerCase().endsWith(ext)) {
-        baseName += ext;
-      }
-
-      if (addIndex) {
-        baseName = `${String(i + 1).padStart(2, "0")}_${baseName}`;
-      }
-
-      const arrayBuffer = await res.arrayBuffer();
-      const cleanSection = sanitize(item.section || "Chung");
-
-      if (useFolders) {
-        zip.folder(cleanSection).file(baseName, arrayBuffer);
-      } else {
-        zip.file(baseName, arrayBuffer);
-      }
-    } catch (err) {
-      console.warn("Failed to fetch item for zip:", item.title, err);
-    }
-
-    await new Promise((r) => setTimeout(r, 150));
-  }
-
-  onProgress({
-    current: items.length,
-    total: items.length,
-    currentFile: "Đang đóng gói...",
-    status: "Đang nén tệp .ZIP..."
-  });
-
-  const zipBlob = await zip.generateAsync(
-    {
-      type: "blob",
-      compression: "DEFLATE",
-      compressionOptions: { level: 6 }
-    },
-    (metadata) => {
-      const pct = Math.round(metadata.percent);
-      onProgress({
-        current: items.length,
-        total: items.length,
-        currentFile: `Nén ${pct}%`,
-        status: `Đang nén tệp .ZIP: ${pct}%`
-      });
-    }
-  );
-
-  const blobUrl = URL.createObjectURL(zipBlob);
-  const a = document.createElement("a");
-  a.href = blobUrl;
-  a.download = `${cleanCourse}.zip`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
-
-  onProgress({
-    current: items.length,
-    total: items.length,
-    currentFile: `${cleanCourse}.zip`,
-    status: `Đã hoàn tất tải: ${cleanCourse}.zip`,
-    isDone: true
-  });
-}
 
 document.addEventListener("DOMContentLoaded", async () => {
   const notMoodleView = document.getElementById("not-moodle-view");
@@ -172,7 +47,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!response) {
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
-          files: ["jszip.min.js", "content.js"]
+          files: ["content.js"]
         });
         await new Promise((r) => setTimeout(r, 200));
         response = await new Promise((resolve) => {
@@ -277,7 +152,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   rescanBtn.addEventListener("click", loadData);
 
-  startBtn.addEventListener("click", async () => {
+  startBtn.addEventListener("click", () => {
     const checkedIds = new Set(
       Array.from(document.querySelectorAll(".item-chk:checked")).map((c) => c.getAttribute("data-id"))
     );
@@ -285,41 +160,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (selectedItems.length === 0) return;
 
-    const isZip = document.getElementById("opt-zip").checked;
     const useFolders = document.getElementById("opt-folders").checked;
     const addIndex = document.getElementById("opt-index").checked;
 
     progressBox.classList.remove("hidden");
     progressBarFill.style.width = "0%";
     progressPercent.innerText = "0%";
+    progressStatus.innerText = "Đang bắt đầu tải...";
     startBtn.disabled = true;
 
-    if (isZip) {
-      await downloadAsZip({
+    chrome.runtime.sendMessage({
+      action: "START_DOWNLOAD",
+      data: {
         courseName: courseData.courseName,
         items: selectedItems,
         useFolders,
-        addIndex,
-        onProgress: (p) => {
-          const pct = Math.round((p.current / p.total) * 100) || 0;
-          progressBarFill.style.width = `${pct}%`;
-          progressPercent.innerText = `${pct}%`;
-          progressStatus.innerText = p.status || p.currentFile;
-          if (p.isDone) startBtn.disabled = false;
-        }
-      });
-    } else {
-      progressStatus.innerText = "Đang bắt đầu tải từng tệp...";
-      chrome.runtime.sendMessage({
-        action: "START_DOWNLOAD",
-        data: {
-          courseName: courseData.courseName,
-          items: selectedItems,
-          useFolders,
-          addIndex
-        }
-      });
-    }
+        addIndex
+      }
+    });
   });
 
   chrome.runtime.onMessage.addListener((msg) => {
