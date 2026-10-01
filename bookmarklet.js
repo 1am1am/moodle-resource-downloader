@@ -1,7 +1,18 @@
-// bookmarklet.js - Moodle Course Resource Downloader (Direct native download, zero dependencies)
+// bookmarklet.js - Moodle Course Downloader (Ultra-reliable direct downloads)
 (function () {
   const oldModal = document.getElementById("moodle-dl-modal");
   if (oldModal) oldModal.remove();
+
+  function sanitize(name) {
+    if (!name) return "unnamed";
+    return name
+      .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_")
+      .replace(/[\t\n\r]/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/^\.+|\.+$/g, "")
+      .trim()
+      .substring(0, 120);
+  }
 
   function getCleanText(el) {
     if (!el) return "";
@@ -17,6 +28,11 @@
       .replace(/(Thu gọn|Mở rộng)\s*tất cả/gi, "")
       .replace(/\s+/g, " ")
       .trim() || "Tài liệu chung";
+  }
+
+  function fixDuplicateExtension(name) {
+    if (!name) return "file";
+    return name.replace(/(\.[a-zA-Z0-9]{2,5})\1+$/i, "$1");
   }
 
   function detectFileType(title, url) {
@@ -65,6 +81,7 @@
       title = link.getAttribute("aria-label") || getCleanText(link.closest(".activityinstance, .activity-item")) || `Tai_lieu_${idx + 1}`;
     }
     title = title.replace(/^(File|Tập tin|Tệp|Tài liệu|Folder|Thư mục|PDF document|Document)\s*/i, "");
+    title = fixDuplicateExtension(title);
 
     let sectionName = "Tài liệu chung (General)";
     const secEl = link.closest("[data-sectionid], .course-section, li.section.main, li.section, div.section");
@@ -88,6 +105,52 @@
   if (items.length === 0) {
     alert("Không tìm thấy tệp tài liệu nào trên trang này. Hãy chắc chắn bạn đang mở trang chi tiết một khóa học trên Moodle.");
     return;
+  }
+
+  // Resolve true file URL (handles Moodle embedded pages & redirects)
+  async function resolveDirectFile(url, fallbackTitle) {
+    try {
+      let targetUrl = url;
+      if (targetUrl.includes("/mod/resource/view.php") && !targetUrl.includes("redirect=1")) {
+        targetUrl += (targetUrl.includes("?") ? "&" : "?") + "redirect=1";
+      }
+
+      const res = await fetch(targetUrl, { credentials: "include" });
+
+      // If browser followed redirect to pluginfile.php
+      if (res.url && res.url.includes("/pluginfile.php/")) {
+        let finalUrl = res.url;
+        if (!finalUrl.includes("forcedownload=1")) {
+          finalUrl += (finalUrl.includes("?") ? "&" : "?") + "forcedownload=1";
+        }
+        return { finalUrl, res };
+      }
+
+      // If response is HTML wrapper (Moodle embed view)
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("text/html")) {
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        const embed = doc.querySelector(
+          'object[data*="/pluginfile.php/"], iframe[src*="/pluginfile.php/"], embed[src*="/pluginfile.php/"], .resourcecontent a[href*="/pluginfile.php/"], div[role="main"] a[href*="/pluginfile.php/"]'
+        );
+        if (embed) {
+          let extracted = embed.getAttribute("data") || embed.getAttribute("src") || embed.getAttribute("href");
+          if (extracted) {
+            if (!extracted.includes("forcedownload=1")) {
+              extracted += (extracted.includes("?") ? "&" : "?") + "forcedownload=1";
+            }
+            const innerRes = await fetch(extracted, { credentials: "include" });
+            return { finalUrl: extracted, res: innerRes };
+          }
+        }
+      }
+
+      return { finalUrl: targetUrl, res };
+    } catch (err) {
+      console.warn("Resolve error:", err);
+      return { finalUrl: url, res: null };
+    }
   }
 
   // Inject Styles
@@ -135,7 +198,7 @@
       .moodle-dl-filter-btn:hover { background: #e2e8f0; color: #0f172a; }
       .moodle-dl-filter-btn.active { background: #0f172a; color: #ffffff; border-color: #0f172a; }
       .moodle-dl-notice {
-        padding: 8px 22px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #64748b;
+        padding: 8px 22px; background: #fffbeb; border-bottom: 1px solid #fef3c7; font-size: 12px; color: #92400e;
       }
       .moodle-dl-list { padding: 12px 22px; overflow-y: auto; flex: 1; max-height: 380px; }
       .moodle-dl-group { margin-bottom: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff; }
@@ -203,7 +266,7 @@
       </div>
 
       <div class="moodle-dl-notice">
-        Tip: Nếu trình duyệt hỏi <em>"Tải nhiều tệp xuống?"</em>, bạn hãy chọn <strong>Cho phép (Allow)</strong> nhé.
+        <strong>Lưu ý:</strong> Khi trình duyệt hiện thông báo <em>"Tải nhiều tệp xuống?"</em>, bạn nhớ bấm <strong>Cho phép (Allow)</strong> để Chrome tải đủ toàn bộ nhé.
       </div>
 
       <div class="moodle-dl-list" id="bm-list"></div>
@@ -337,7 +400,7 @@
     if (e.target === modal) modal.remove();
   };
 
-  // Direct sequential download execution
+  // Direct sequential file download (via Blob to enforce real filenames)
   document.getElementById("bm-start").onclick = async () => {
     const checkedIds = new Set(Array.from(document.querySelectorAll(".bm-chk:checked")).map((c) => c.getAttribute("data-id")));
     const selected = items.filter((i) => checkedIds.has(i.id));
@@ -356,25 +419,68 @@
       const pct = Math.round(((i + 1) / selected.length) * 100);
       pfill.style.width = `${pct}%`;
       ppct.innerText = `${pct}%`;
-      pstatus.innerText = `Đang tải (${i + 1}/${selected.length}): ${it.title}`;
+      pstatus.innerText = `Đang xử lý (${i + 1}/${selected.length}): ${it.title}`;
 
-      let downloadUrl = it.url;
-      if (downloadUrl.includes("/mod/resource/view.php") && !downloadUrl.includes("redirect=1")) {
-        downloadUrl += (downloadUrl.includes("?") ? "&" : "?") + "redirect=1";
-      } else if (downloadUrl.includes("/pluginfile.php") && !downloadUrl.includes("forcedownload=1")) {
-        downloadUrl += (downloadUrl.includes("?") ? "&" : "?") + "forcedownload=1";
+      try {
+        const { finalUrl, res } = await resolveDirectFile(it.url, it.title);
+
+        if (res && res.ok) {
+          // Check if response has real content
+          let fileName = it.title;
+          const disposition = res.headers.get("content-disposition");
+          if (disposition) {
+            const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+            if (utfMatch && utfMatch[1]) fileName = decodeURIComponent(utfMatch[1]);
+            else {
+              const std = disposition.match(/filename=["']?([^"';]+)["']?/i);
+              if (std && std[1]) fileName = std[1].trim();
+            }
+          } else if (res.url) {
+            try {
+              const p = new URL(res.url);
+              const part = p.pathname.split("/").filter(Boolean).pop();
+              if (part && part.includes(".")) fileName = decodeURIComponent(part);
+            } catch (e) {}
+          }
+
+          let ext = fileName.includes(".") ? fileName.substring(fileName.lastIndexOf(".")).toLowerCase() : ".pdf";
+          let cleanName = sanitize(it.title);
+          if (!cleanName.toLowerCase().endsWith(ext)) cleanName += ext;
+          cleanName = fixDuplicateExtension(cleanName);
+
+          // Get blob and trigger immediate download
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = blobUrl;
+          a.download = cleanName;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            a.remove();
+            URL.revokeObjectURL(blobUrl);
+          }, 15000);
+        } else {
+          // Fallback direct anchor click
+          const a = document.createElement("a");
+          a.href = finalUrl;
+          a.download = "";
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => a.remove(), 2000);
+        }
+      } catch (err) {
+        console.warn("Download error for item:", it, err);
+        // Fallback
+        const a = document.createElement("a");
+        a.href = it.url + (it.url.includes("?") ? "&" : "?") + "redirect=1";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => a.remove(), 2000);
       }
 
-      // Trigger download via hidden iframe
-      const ifr = document.createElement("iframe");
-      ifr.style.display = "none";
-      ifr.src = downloadUrl;
-      document.body.appendChild(ifr);
-
-      // Give browser time between requests so downloads queue up cleanly
-      await new Promise((r) => setTimeout(r, 900));
-
-      setTimeout(() => ifr.remove(), 15000);
+      // Safe pacing between files (650ms)
+      await new Promise((r) => setTimeout(r, 650));
     }
 
     pstatus.innerText = `Đã gửi lệnh tải toàn bộ ${selected.length} tệp!`;

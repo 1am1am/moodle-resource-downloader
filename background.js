@@ -8,7 +8,6 @@ let downloadState = {
   errors: []
 };
 
-// Sanitize string for valid file & folder names across Windows/Mac/Linux
 function sanitize(name) {
   if (!name) return "unnamed";
   return name
@@ -20,66 +19,81 @@ function sanitize(name) {
     .substring(0, 120);
 }
 
-// Clean and prevent duplicate extensions like .pdf.pdf or .txt.txt
 function fixDuplicateExtension(name) {
   if (!name) return "file";
   return name.replace(/(\.[a-zA-Z0-9]{2,5})\1+$/i, "$1");
 }
 
-// Extract file extension and filename from URL or Content-Disposition
+// Resolve true pluginfile.php URL and filename
 async function resolveFileInfo(url, fallbackTitle) {
   try {
-    const response = await fetch(url, {
-      method: "HEAD",
-      credentials: "include"
-    });
+    let targetUrl = url;
+    if (targetUrl.includes("/mod/resource/view.php") && !targetUrl.includes("redirect=1")) {
+      targetUrl += (targetUrl.includes("?") ? "&" : "?") + "redirect=1";
+    }
 
-    let detectedName = "";
-    const disposition = response.headers.get("content-disposition");
-    if (disposition) {
-      const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
-      if (utfMatch && utfMatch[1]) {
-        detectedName = decodeURIComponent(utfMatch[1]);
-      } else {
-        const standardMatch = disposition.match(/filename=["']?([^"';]+)["']?/i);
-        if (standardMatch && standardMatch[1]) {
-          detectedName = standardMatch[1].trim();
+    const response = await fetch(targetUrl, { credentials: "include" });
+
+    // Case 1: Redirected to pluginfile.php
+    if (response.url && response.url.includes("/pluginfile.php/")) {
+      let finalUrl = response.url;
+      if (!finalUrl.includes("forcedownload=1")) {
+        finalUrl += (finalUrl.includes("?") ? "&" : "?") + "forcedownload=1";
+      }
+
+      let detectedName = "";
+      const disposition = response.headers.get("content-disposition");
+      if (disposition) {
+        const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+        if (utfMatch && utfMatch[1]) detectedName = decodeURIComponent(utfMatch[1]);
+        else {
+          const std = disposition.match(/filename=["']?([^"';]+)["']?/i);
+          if (std && std[1]) detectedName = std[1].trim();
         }
+      }
+
+      let ext = "";
+      if (detectedName && detectedName.includes(".")) {
+        ext = detectedName.substring(detectedName.lastIndexOf(".")).toLowerCase();
+      }
+
+      let finalName = detectedName || fallbackTitle || "file";
+      if (ext && !finalName.toLowerCase().endsWith(ext)) finalName += ext;
+      finalName = fixDuplicateExtension(finalName);
+
+      return { finalUrl, finalName };
+    }
+
+    // Case 2: Embed HTML page wrapper
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("text/html")) {
+      const html = await response.text();
+      const match = html.match(/(?:href|src|data)=["']([^"']*\/pluginfile\.php\/[^"']*)["']/i);
+      if (match && match[1]) {
+        let extracted = match[1].replace(/&amp;/g, "&");
+        if (!extracted.includes("forcedownload=1")) {
+          extracted += (extracted.includes("?") ? "&" : "?") + "forcedownload=1";
+        }
+
+        let finalName = fallbackTitle || "file";
+        if (!/\.[a-zA-Z0-9]{2,5}$/i.test(finalName)) {
+          finalName += ".pdf";
+        }
+        finalName = fixDuplicateExtension(finalName);
+
+        return { finalUrl: extracted, finalName };
       }
     }
 
-    // Fallback to URL path
-    if (!detectedName && response.url) {
-      try {
-        const parsed = new URL(response.url);
-        const lastPart = parsed.pathname.split("/").filter(Boolean).pop();
-        if (lastPart && lastPart.includes(".")) {
-          detectedName = decodeURIComponent(lastPart);
-        }
-      } catch (e) {}
-    }
-
-    let ext = "";
-    if (detectedName && detectedName.includes(".")) {
-      ext = detectedName.substring(detectedName.lastIndexOf(".")).toLowerCase();
-    }
-
-    let finalName = detectedName || fallbackTitle || "file";
-    if (ext && !finalName.toLowerCase().endsWith(ext)) {
-      finalName += ext;
-    }
-
+    let finalName = fallbackTitle || "file";
+    if (!/\.[a-zA-Z0-9]{2,5}$/i.test(finalName)) finalName += ".pdf";
     finalName = fixDuplicateExtension(finalName);
-    return { finalName, ext };
+    return { finalUrl: targetUrl, finalName };
   } catch (err) {
     let finalName = fallbackTitle || "file";
-    if (!/\.[a-zA-Z0-9]{2,5}$/i.test(finalName)) {
-      if (finalName.toLowerCase().includes("pdf") || finalName.toLowerCase().includes("slide")) {
-        finalName += ".pdf";
-      }
-    }
+    if (!/\.[a-zA-Z0-9]{2,5}$/i.test(finalName)) finalName += ".pdf";
     finalName = fixDuplicateExtension(finalName);
-    return { finalName, ext: "" };
+    return { finalUrl: url, finalName };
   }
 }
 
@@ -107,13 +121,8 @@ async function processDownloads({ courseName, items, useFolders = true, addIndex
     broadcastProgress();
 
     try {
-      let downloadUrl = item.url;
-      if (downloadUrl.includes("/mod/resource/view.php") && !downloadUrl.includes("redirect=1")) {
-        downloadUrl += (downloadUrl.includes("?") ? "&" : "?") + "redirect=1";
-      }
-
-      const info = await resolveFileInfo(downloadUrl, item.title);
-      let filename = sanitize(info.finalName || item.title);
+      const { finalUrl, finalName } = await resolveFileInfo(item.url, item.title);
+      let filename = sanitize(finalName || item.title);
       filename = fixDuplicateExtension(filename);
 
       if (addIndex) {
@@ -132,7 +141,7 @@ async function processDownloads({ courseName, items, useFolders = true, addIndex
       await new Promise((resolve) => {
         chrome.downloads.download(
           {
-            url: downloadUrl,
+            url: finalUrl,
             filename: fullPath,
             conflictAction: "uniquify"
           },
