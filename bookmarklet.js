@@ -246,8 +246,8 @@
       .moodle-dl-label { display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; }
       .moodle-dl-label input[type="checkbox"] { width: 14px; height: 14px; accent-color: #0f172a; cursor: pointer; margin: 0; }
       .moodle-dl-info-box {
-        padding: 8px 22px; background: #f0fdf4; border-bottom: 1px solid #dcfce7;
-        font-size: 12px; color: #166534; display: flex; align-items: center; gap: 6px;
+        padding: 8px 22px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+        font-size: 12px; color: #475569; display: flex; align-items: center; gap: 6px;
       }
       .moodle-dl-list { padding: 12px 22px; overflow-y: auto; flex: 1; max-height: 380px; }
       .moodle-dl-group { margin-bottom: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff; }
@@ -315,8 +315,8 @@
 
       <div class="moodle-dl-options">
         <label class="moodle-dl-label">
-          <input type="checkbox" id="bm-opt-folders" checked>
-          <span>Tự động tạo thư mục theo chương/tuần</span>
+          <input type="checkbox" id="bm-opt-prefix" checked>
+          <span>Gắn tên tuần/chương vào tên file ([Tuần 1]...)</span>
         </label>
         <label class="moodle-dl-label">
           <input type="checkbox" id="bm-opt-index">
@@ -325,7 +325,7 @@
       </div>
 
       <div class="moodle-dl-info-box">
-        <span>Gợi ý: Khi bấm tải, hãy chọn thư mục lưu (ví dụ: Downloads), tool sẽ tự tạo thư mục <strong>${sanitize(courseName)}</strong> và các thư mục tuần bên trong.</span>
+        <span>Mẹo: Nếu muốn tự động gom vào đúng folder môn học và folder tuần trên máy tính, hãy dùng bản <strong>Chrome Extension</strong> nhé.</span>
       </div>
 
       <div class="moodle-dl-list" id="bm-list"></div>
@@ -336,7 +336,7 @@
       </div>
 
       <div class="moodle-dl-footer">
-        <button class="moodle-dl-btn" id="bm-start">Tải tài liệu vào thư mục (${items.length})</button>
+        <button class="moodle-dl-btn" id="bm-start">Tải tài liệu đã chọn (${items.length})</button>
       </div>
     </div>
   `;
@@ -394,7 +394,7 @@
   function updateBtn() {
     const cnt = document.querySelectorAll(".bm-chk:checked").length;
     const b = document.getElementById("bm-start");
-    b.innerText = `Tải tài liệu vào thư mục (${cnt})`;
+    b.innerText = `Tải tài liệu đã chọn (${cnt})`;
     b.disabled = cnt === 0;
   }
 
@@ -459,41 +459,19 @@
     if (e.target === modal) modal.remove();
   };
 
-  // Execution with Directory Picker support
+  // Direct sequential file download (via Blob to enforce real filenames)
   document.getElementById("bm-start").onclick = async () => {
     const checkedIds = new Set(Array.from(document.querySelectorAll(".bm-chk:checked")).map((c) => c.getAttribute("data-id")));
     const selected = items.filter((i) => checkedIds.has(i.id));
     if (selected.length === 0) return;
 
-    const useFolders = document.getElementById("bm-opt-folders").checked;
-    const addIndex = document.getElementById("bm-opt-index").checked;
+    const addPrefix = document.getElementById("bm-opt-prefix") ? document.getElementById("bm-opt-prefix").checked : true;
+    const addIndex = document.getElementById("bm-opt-index") ? document.getElementById("bm-opt-index").checked : false;
 
     const pbox = document.getElementById("bm-pbox");
     const pfill = document.getElementById("bm-pfill");
     const pstatus = document.getElementById("bm-pstatus");
     const ppct = document.getElementById("bm-ppct");
-
-    // Check if browser supports showDirectoryPicker (Chrome, Edge, Cốc Cốc, Brave)
-    let rootDirHandle = null;
-    let courseDirHandle = null;
-
-    if (window.showDirectoryPicker) {
-      try {
-        rootDirHandle = await window.showDirectoryPicker({
-          id: "moodle_download_dir",
-          mode: "readwrite"
-        });
-        if (rootDirHandle) {
-          courseDirHandle = await rootDirHandle.getDirectoryHandle(sanitize(courseName), { create: true });
-        }
-      } catch (err) {
-        if (err.name === "AbortError") {
-          // User cancelled folder picker
-          return;
-        }
-        console.warn("Directory picker error, falling back:", err);
-      }
-    }
 
     pbox.style.display = "block";
     document.getElementById("bm-start").disabled = true;
@@ -515,39 +493,27 @@
         if (!seenNamesBySection[secKey]) seenNamesBySection[secKey] = new Set();
         cleanName = getUniqueFileName(seenNamesBySection[secKey], cleanName);
 
+        if (addPrefix && it.section) {
+          cleanName = `[${sanitize(it.section)}] ${cleanName}`;
+        }
+
         if (addIndex) {
           cleanName = `${String(i + 1).padStart(2, "0")}_${cleanName}`;
         }
 
         if (res && res.ok) {
           const blob = await res.blob();
-
-          if (courseDirHandle) {
-            // Write directly into subdirectories on Windows!
-            let targetDir = courseDirHandle;
-            if (useFolders) {
-              targetDir = await courseDirHandle.getDirectoryHandle(sanitize(it.section), { create: true });
-            }
-
-            const fileHandle = await targetDir.getFileHandle(cleanName, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-          } else {
-            // Fallback: download with section prefix
-            const blobUrl = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = blobUrl;
-            a.download = useFolders ? `[${sanitize(it.section)}] ${cleanName}` : cleanName;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => {
-              a.remove();
-              URL.revokeObjectURL(blobUrl);
-            }, 10000);
-          }
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = blobUrl;
+          a.download = cleanName;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            a.remove();
+            URL.revokeObjectURL(blobUrl);
+          }, 15000);
         } else {
-          // Fallback anchor click
           const a = document.createElement("a");
           a.href = finalUrl;
           a.download = cleanName;
@@ -556,13 +522,18 @@
           setTimeout(() => a.remove(), 2000);
         }
       } catch (err) {
-        console.warn("Download error:", it, err);
+        console.warn("Download error for item:", it, err);
+        const a = document.createElement("a");
+        a.href = it.url + (it.url.includes("?") ? "&" : "?") + "redirect=1";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => a.remove(), 2000);
       }
 
-      await new Promise((r) => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 650));
     }
 
-    pstatus.innerText = `Đã hoàn tất lưu ${selected.length} tệp vào thư mục!`;
+    pstatus.innerText = `Đã hoàn tất tải ${selected.length} tệp!`;
     document.getElementById("bm-start").disabled = false;
   };
 })();
