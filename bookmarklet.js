@@ -314,18 +314,22 @@
       </div>
 
       <div class="moodle-dl-options">
-        <label class="moodle-dl-label">
-          <input type="checkbox" id="bm-opt-prefix" checked>
-          <span>Gắn tên tuần/chương vào tên file ([Tuần 1]...)</span>
+        <label class="moodle-dl-label" title="Gom toàn bộ vào 1 file ZIP có sẵn cấu trúc thư mục môn học và từng tuần">
+          <input type="radio" name="bm-mode" id="bm-mode-zip" checked style="width:14px; height:14px; accent-color:#0f172a; cursor:pointer;">
+          <strong style="color:#0f172a;">Gom theo thư mục môn & tuần (.ZIP - Dễ quản lý)</strong>
         </label>
-        <label class="moodle-dl-label">
-          <input type="checkbox" id="bm-opt-index">
+        <label class="moodle-dl-label" title="Tải từng file rời rạc trực tiếp về thư mục Downloads">
+          <input type="radio" name="bm-mode" id="bm-mode-direct" style="width:14px; height:14px; accent-color:#0f172a; cursor:pointer;">
+          <span>Tải file lẻ trực tiếp</span>
+        </label>
+        <label class="moodle-dl-label" style="margin-left:auto;">
+          <input type="checkbox" id="bm-opt-index" style="width:14px; height:14px; accent-color:#0f172a; cursor:pointer;">
           <span>Đánh số thứ tự (01_, 02_...)</span>
         </label>
       </div>
 
       <div class="moodle-dl-info-box">
-        <span>Mẹo: Nếu muốn tự động gom vào đúng folder môn học và folder tuần trên máy tính, hãy dùng bản <strong>Chrome Extension</strong> nhé.</span>
+        <span>Khuyên dùng chế độ <strong>Gom theo thư mục môn & tuần (.ZIP)</strong> để tự động chia sẵn các folder tuần trên máy tính.</span>
       </div>
 
       <div class="moodle-dl-list" id="bm-list"></div>
@@ -394,9 +398,13 @@
   function updateBtn() {
     const cnt = document.querySelectorAll(".bm-chk:checked").length;
     const b = document.getElementById("bm-start");
-    b.innerText = `Tải tài liệu đã chọn (${cnt})`;
+    const isZip = document.getElementById("bm-mode-zip")?.checked;
+    b.innerText = isZip ? `Tải trọn bộ thư mục (${cnt})` : `Tải các file lẻ (${cnt})`;
     b.disabled = cnt === 0;
   }
+
+  document.getElementById("bm-mode-zip")?.addEventListener("change", updateBtn);
+  document.getElementById("bm-mode-direct")?.addEventListener("change", updateBtn);
 
   // Toggle Collapse
   document.querySelectorAll(".moodle-dl-toggle-btn").forEach((btn) => {
@@ -459,13 +467,30 @@
     if (e.target === modal) modal.remove();
   };
 
-  // Direct sequential file download (via Blob to enforce real filenames)
+  async function loadJSZip() {
+    if (window.JSZip) return window.JSZip;
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://1am1am.github.io/moodle-resource-downloader/jszip.min.js";
+      s.onload = () => resolve(window.JSZip);
+      s.onerror = () => {
+        const s2 = document.createElement("script");
+        s2.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+        s2.onload = () => resolve(window.JSZip);
+        s2.onerror = reject;
+        document.head.appendChild(s2);
+      };
+      document.head.appendChild(s);
+    });
+  }
+
+  // Execution: ZIP folder packaging or direct sequential download
   document.getElementById("bm-start").onclick = async () => {
     const checkedIds = new Set(Array.from(document.querySelectorAll(".bm-chk:checked")).map((c) => c.getAttribute("data-id")));
     const selected = items.filter((i) => checkedIds.has(i.id));
     if (selected.length === 0) return;
 
-    const addPrefix = document.getElementById("bm-opt-prefix") ? document.getElementById("bm-opt-prefix").checked : true;
+    const isZip = document.getElementById("bm-mode-zip") ? document.getElementById("bm-mode-zip").checked : true;
     const addIndex = document.getElementById("bm-opt-index") ? document.getElementById("bm-opt-index").checked : false;
 
     const pbox = document.getElementById("bm-pbox");
@@ -478,6 +503,79 @@
 
     const seenNamesBySection = {};
 
+    if (isZip) {
+      // MODE 1: ZIP with Course and Week folders
+      pstatus.innerText = "Đang nạp công cụ tạo thư mục...";
+      try {
+        await loadJSZip();
+      } catch (e) {
+        console.warn("Could not load JSZip, falling back to direct downloads:", e);
+      }
+
+      if (window.JSZip) {
+        const zip = new JSZip();
+        const root = zip.folder(sanitize(courseName));
+
+        for (let i = 0; i < selected.length; i++) {
+          const it = selected[i];
+          const pct = Math.round(((i + 1) / selected.length) * 85);
+          pfill.style.width = `${pct}%`;
+          ppct.innerText = `${pct}%`;
+          pstatus.innerText = `Đang lấy (${i + 1}/${selected.length}): ${it.title}`;
+
+          try {
+            const { finalUrl, res } = await resolveDirectFile(it.url, it.title);
+            let cleanName = extractFileName(res, it.title);
+
+            const secKey = it.section || "Tài liệu chung";
+            if (!seenNamesBySection[secKey]) seenNamesBySection[secKey] = new Set();
+            cleanName = getUniqueFileName(seenNamesBySection[secKey], cleanName);
+
+            if (addIndex) {
+              cleanName = `${String(i + 1).padStart(2, "0")}_${cleanName}`;
+            }
+
+            if (res && res.ok) {
+              const blob = await res.blob();
+              const secFolder = root.folder(sanitize(secKey));
+              secFolder.file(cleanName, blob);
+            }
+          } catch (err) {
+            console.warn("Error fetching item for zip:", it, err);
+          }
+          await new Promise((r) => setTimeout(r, 120));
+        }
+
+        pstatus.innerText = "Đang hoàn tất đóng gói cây thư mục...";
+        ppct.innerText = "90%";
+        pfill.style.width = "90%";
+
+        const zipBlob = await zip.generateAsync({ type: "blob", compression: "STORE" }, (meta) => {
+          const progress = 90 + Math.round(meta.percent * 0.1);
+          pfill.style.width = `${progress}%`;
+          ppct.innerText = `${progress}%`;
+        });
+
+        const blobUrl = URL.createObjectURL(zipBlob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `${sanitize(courseName)}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          a.remove();
+          URL.revokeObjectURL(blobUrl);
+        }, 20000);
+
+        pstatus.innerText = `Hoàn tất! Đã gom ${selected.length} tệp vào các folder tuần/chương.`;
+        ppct.innerText = "100%";
+        pfill.style.width = "100%";
+        document.getElementById("bm-start").disabled = false;
+        return;
+      }
+    }
+
+    // MODE 2: Direct sequential file download (or fallback if JSZip fails)
     for (let i = 0; i < selected.length; i++) {
       const it = selected[i];
       const pct = Math.round(((i + 1) / selected.length) * 100);
@@ -493,7 +591,7 @@
         if (!seenNamesBySection[secKey]) seenNamesBySection[secKey] = new Set();
         cleanName = getUniqueFileName(seenNamesBySection[secKey], cleanName);
 
-        if (addPrefix && it.section) {
+        if (it.section) {
           cleanName = `[${sanitize(it.section)}] ${cleanName}`;
         }
 
